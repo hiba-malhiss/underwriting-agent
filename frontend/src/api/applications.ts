@@ -1,18 +1,17 @@
-import { request } from "./http";
+import { http } from "./http";
 import type { ApplicationDocument, DocumentListResponse } from "./types";
 
 export async function listDocuments(applicationId: string): Promise<ApplicationDocument[]> {
-  const { documents } = await request<DocumentListResponse>(
-    `/applications/${applicationId}/documents`,
-  );
-  return documents;
+  const { data } = await http.get<DocumentListResponse>(`/applications/${applicationId}/documents`);
+  return data.documents;
 }
 
-export function uploadDocument(applicationId: string, file: File): Promise<ApplicationDocument> {
+export async function uploadDocument(applicationId: string, file: File): Promise<ApplicationDocument> {
   const body = new FormData();
   body.append("file", file); // the backend's `file: UploadFile` parameter
-  return request<ApplicationDocument>(`/applications/${applicationId}/documents`, {
-    method: "POST",
+  const { data } = await http.post<ApplicationDocument>(
+    `/applications/${applicationId}/documents`,
     body,
-  });
+  );
+  return data;
 }
