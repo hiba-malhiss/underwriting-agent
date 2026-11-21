@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.applications.routes import router as applications_router
+from app.core.azure_credential import azure_credential
 from app.core.settings import settings
 from app.storage.blob import BlobStore
 
@@ -11,13 +12,16 @@ from app.storage.blob import BlobStore
 # app.state => store data across the app => access by request.app.state
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # One Azure identity for the app, shared by every Azure client (Storage now; Document
+    # Intelligence, Foundry and AI Search later): one sign-in, one token cache
+    credential = azure_credential(settings.azure_interactive_login, settings.azure_tenant_id)
     # One Blob Storage client for the app's lifetime, shared by every request
     app.state.blob_store = BlobStore.connect(
-        settings.storage_container,
-        account_url=settings.azure_storage_account_url,
+        settings.azure_storage_account_url, settings.storage_container, credential
     )
     yield
     await app.state.blob_store.close()
+    await credential.close()
 
 
 app = FastAPI(title="Health Insurance Underwriting Agent", lifespan=lifespan)

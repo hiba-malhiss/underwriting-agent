@@ -15,8 +15,13 @@ from pathlib import PurePath
 from urllib.parse import quote, unquote
 from uuid import UUID, uuid4
 
-from azure.core.exceptions import AzureError, ResourceNotFoundError
-from azure.identity.aio import DefaultAzureCredential
+from azure.core.credentials_async import AsyncTokenCredential
+from azure.core.exceptions import (
+    AzureError,
+    ClientAuthenticationError,
+    HttpResponseError,
+    ResourceNotFoundError,
+)
 from azure.storage.blob import ContentSettings
 from azure.storage.blob.aio import BlobServiceClient
 
@@ -29,6 +34,10 @@ class StorageError(Exception):
 
 class ContainerNotFoundError(StorageError):
     """The container doesn't exist: it is created in the Portal, not by the app."""
+
+
+class StorageAuthError(StorageError):
+    """The app couldn't sign in to Azure, or its identity has no data role on the account."""
 
 
 # prepare constructure disable update obj after creation
@@ -53,32 +62,46 @@ def blob_name(application_id: UUID, filename: str) -> str:
     return f"{application_id}/{uuid4().hex}-{safe_filename(filename)}"
 
 
+def to_storage_error(error: AzureError, container: str) -> StorageError:
+    """A short, actionable error instead of the Azure SDK's full report."""
+    if isinstance(error, ClientAuthenticationError):
+        return StorageAuthError(
+            "Couldn't sign in to Azure. Locally, set AZURE_INTERACTIVE_LOGIN=true and "
+            "AZURE_TENANT_ID in .env; on Azure, enable the app's Managed Identity."
+        )
+    if isinstance(error, HttpResponseError) and error.status_code == 403:
+        return StorageAuthError(
+            "Signed in, but not allowed to use the blobs. Give your identity the "
+            "'Storage Blob Data Contributor' role on the storage account (Access control "
+            "(IAM)). Owner isn't enough: it manages the account, not its data."
+        )
+    if isinstance(error, ResourceNotFoundError):
+        return ContainerNotFoundError(
+            f"Container '{container}' not found. Check STORAGE_CONTAINER matches "
+            "the container you created in the Portal (Storage account → Containers)."
+        )
+    return StorageError(str(error))
+
+
 class BlobStore:
     """One shared client for the app's lifetime (opened at startup, closed at shutdown)."""
 
-    def __init__(
-        self,
-        service: BlobServiceClient,
-        container: str,
-        credential: DefaultAzureCredential | None = None,
-    ):
+    def __init__(self, service: BlobServiceClient, container: str):
         self._service = service
         self._container = service.get_container_client(container)
         self._container_name = container
-        self._credential = credential
 
     @classmethod
-    def connect(cls, container: str, account_url: str | None = None) -> "BlobStore":
-        """A connection string signs in with the account key (local development). Otherwise the
-        account URL signs in with an Entra identity: on Azure, the app's Managed Identity, which
-        needs a data role on the account (e.g. Storage Blob Data Contributor)."""
-        credential = DefaultAzureCredential()
-        return cls(BlobServiceClient(account_url, credential=credential), container, credential)
+    def connect(
+        cls, account_url: str, container: str, credential: AsyncTokenCredential
+    ) -> "BlobStore":
+        """Sign in to the account with an Entra identity (see core/azure_credential.py). The
+        identity needs a DATA role on the account, e.g. Storage Blob Data Contributor: Owner or
+        Contributor only manage the account, they don't read or write its blobs."""
+        return cls(BlobServiceClient(account_url, credential=credential), container)
 
     async def close(self) -> None:
         await self._service.close()
-        if self._credential:
-            await self._credential.close()
 
     async def upload(
         self, application_id: UUID, filename: str, data: bytes, content_type: str
@@ -95,10 +118,8 @@ class BlobStore:
             )
 
             properties = await blob_client.get_blob_properties()
-        except ResourceNotFoundError as error:
-            raise self._missing_container() from error
         except AzureError as error:
-            raise StorageError(str(error)) from error
+            raise to_storage_error(error, self._container_name) from error
 
         return StoredDocument(
             name=name,
@@ -124,10 +145,8 @@ class BlobStore:
                         uploaded_at=blob.last_modified,
                     )
                 )
-        except ResourceNotFoundError as error:
-            raise self._missing_container() from error
         except AzureError as error:
-            raise StorageError(str(error)) from error
+            raise to_storage_error(error, self._container_name) from error
 
         return sorted(documents, key=lambda document: document.uploaded_at)
 
@@ -137,9 +156,3 @@ class BlobStore:
             return await self._container.exists()
         except AzureError:
             return False
-
-    def _missing_container(self) -> ContainerNotFoundError:
-        return ContainerNotFoundError(
-            f"Container '{self._container_name}' not found. Check STORAGE_CONTAINER matches the "
-            "container you created in the Portal (Storage account → Containers)."
-        )

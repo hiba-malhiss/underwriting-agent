@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, stat
 from app.applications.schemas import DocumentListResponse, DocumentResponse
 from app.applications.validation import DocumentRejectedError, accepted_content_type
 from app.core.settings import settings
-from app.storage.blob import BlobStore, ContainerNotFoundError, StorageError
+from app.storage.blob import BlobStore, ContainerNotFoundError, StorageAuthError, StorageError
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -40,7 +40,7 @@ async def upload_document(application_id: UUID, file: UploadFile, store: Store) 
         document = await store.upload(application_id, filename, data, content_type)
     except DocumentRejectedError as error:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(error)) from error
-    except ContainerNotFoundError as error:
+    except (ContainerNotFoundError, StorageAuthError) as error:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
     except StorageError as error:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Storage request failed") from error
@@ -51,7 +51,7 @@ async def upload_document(application_id: UUID, file: UploadFile, store: Store) 
 async def list_documents(application_id: UUID, store: Store) -> DocumentListResponse:
     try:
         documents = await store.list_documents(application_id)
-    except ContainerNotFoundError as error:
+    except (ContainerNotFoundError, StorageAuthError) as error:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
     except StorageError as error:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Storage request failed") from error

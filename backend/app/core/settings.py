@@ -8,6 +8,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Sign-in to Azure. from browser for local test
+    azure_interactive_login: bool = Field(default=False, validation_alias="AZURE_INTERACTIVE_LOGIN")
+    azure_tenant_id: str | None = Field(default=None, validation_alias="AZURE_TENANT_ID")
+
     # storage setting endpoint
     azure_storage_account_url: str | None = Field(
         default=None, validation_alias="AZURE_STORAGE_ACCOUNT_URL"
