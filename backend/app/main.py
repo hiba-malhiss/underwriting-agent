@@ -1,8 +1,33 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-app = FastAPI(title="Health Insurance Underwriting Agent")
+from app.applications.routes import router as applications_router
+from app.core.settings import settings
+from app.storage.blob import BlobStore
+
+
+# startup => yeaild => shutdown
+# app.state => store data across the app => access by request.app.state
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # One Blob Storage client for the app's lifetime, shared by every request
+    app.state.blob_store = BlobStore.connect(
+        settings.storage_container,
+        account_url=settings.azure_storage_account_url,
+    )
+    yield
+    await app.state.blob_store.close()
+
+
+app = FastAPI(title="Health Insurance Underwriting Agent", lifespan=lifespan)
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    # "down": check the storage settings in .env and that the container exists
+    storage_up = await app.state.blob_store.is_reachable()
+    return {"status": "ok", "storage": "up" if storage_up else "down"}
+
+
+app.include_router(applications_router)
