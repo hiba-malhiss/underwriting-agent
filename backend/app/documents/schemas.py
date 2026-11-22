@@ -3,7 +3,7 @@ from typing import Self
 
 from pydantic import BaseModel
 
-from app.storage.blob import StoredDocument
+from app.infrastructure.storage.file_store import StoredDocument
 
 
 class DocumentResponse(BaseModel):

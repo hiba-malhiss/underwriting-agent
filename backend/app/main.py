@@ -1,37 +1,46 @@
+"""The composition root: creates the shared clients, wires the modules, and starts the app.
+
+It knows WHICH modules exist, not how they work: each module builds its own parts (see
+documents/dependencies.py).
+"""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.applications.routes import router as applications_router
-from app.core.azure_credential import azure_credential
+from app.core.error_handlers import register_error_handlers
 from app.core.settings import settings
-from app.storage.blob import BlobStore
+from app.documents.controller import router as documents_router
+from app.documents.dependencies import create_document_stores
+from app.infrastructure.azure_credential import azure_credential
 
 
-# startup => yeaild => shutdown
+# startup => yield => shutdown
 # app.state => store data across the app => access by request.app.state
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # One Azure identity for the app, shared by every Azure client (Storage now; Document
-    # Intelligence, Foundry and AI Search later): one sign-in, one token cache
+    # One Azure identity for the whole app, shared by every Azure client
     credential = azure_credential(settings.azure_interactive_login, settings.azure_tenant_id)
-    # One Blob Storage client for the app's lifetime, shared by every request
-    app.state.blob_store = BlobStore.connect(
-        settings.azure_storage_account_url, settings.storage_container, credential
-    )
+    app.state.document_stores = create_document_stores(credential)
     yield
-    await app.state.blob_store.close()
+    for store in app.state.document_stores.values():
+        await store.close()
     await credential.close()
 
 
 app = FastAPI(title="Health Insurance Underwriting Agent", lifespan=lifespan)
+register_error_handlers(app)
+app.include_router(documents_router)
 
 
 @app.get("/health")
 async def health():
-    # "down": check the storage settings in .env and that the container exists
-    storage_up = await app.state.blob_store.is_reachable()
-    return {"status": "ok", "storage": "up" if storage_up else "down"}
-
-
-app.include_router(applications_router)
+    # "down": check the storage settings in .env and that the containers exist
+    stores = app.state.document_stores
+    return {
+        "status": "ok",
+        "storage": {
+            document_type: "up" if await store.is_reachable() else "down"
+            for document_type, store in stores.items()
+        },
+    }

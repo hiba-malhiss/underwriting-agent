@@ -17,8 +17,10 @@ class Settings(BaseSettings):
         default=None, validation_alias="AZURE_STORAGE_ACCOUNT_URL"
     )
 
-    # The private container application documents go in (created in the Portal)
-    storage_container: str = "underwriting-documents"
+    # The private container for each kind of document (created in the Portal):
+    # applicants' documents, and the underwriting guidelines (requirements)
+    applicant_container: str = "underwriting-documents"
+    requirements_container: str = "requirements"
 
     # The largest document accepted, per file
     max_upload_mb: int = Field(default=20, gt=0)

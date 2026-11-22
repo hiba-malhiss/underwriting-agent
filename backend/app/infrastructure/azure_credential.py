@@ -20,6 +20,7 @@ from azure.identity import InteractiveBrowserCredential
 from azure.identity.aio import DefaultAzureCredential
 
 
+# credential class that implements Azure's asynchronous credential interface.
 class BrowserLoginCredential(AsyncTokenCredential):
     """The sync browser sign-in, usable by the async Azure clients."""
 
@@ -30,13 +31,14 @@ class BrowserLoginCredential(AsyncTokenCredential):
         self._lock = asyncio.Lock()
 
     async def get_token(self, *scopes: str, **kwargs: Any) -> AccessToken:
-        async with self._lock:
+        async with self._lock:  # acquire lock, and release it on exit
             return await asyncio.to_thread(self._credential.get_token, *scopes, **kwargs)
 
     async def close(self) -> None:
         self._credential.close()
 
 
+# factory
 def azure_credential(interactive: bool, tenant_id: str | None = None) -> AsyncTokenCredential:
     """The credential for this environment: browser sign-in locally, else the default chain."""
     if interactive:
