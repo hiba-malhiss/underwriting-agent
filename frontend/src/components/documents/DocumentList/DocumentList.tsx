@@ -1,5 +1,5 @@
 import { FileTextIcon, ImageIcon } from "lucide-react";
-import type { ApplicationDocument } from "@/api/types";
+import type { StoredDocument } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 
 interface Props {
-  documents: ApplicationDocument[];
+  documents: StoredDocument[];
   loading: boolean;
   error: string | null;
 }
@@ -23,8 +23,10 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function typeLabel(contentType: string): string {
-  return contentType === "application/pdf" ? "PDF" : contentType.replace("image/", "").toUpperCase();
+// "form.pdf" → "PDF", "guide.docx" → "DOCX" (shorter than the content type)
+function typeLabel(filename: string): string {
+  const dot = filename.lastIndexOf(".");
+  return dot === -1 ? "FILE" : filename.slice(dot + 1).toUpperCase();
 }
 
 export function DocumentList({ documents, loading, error }: Props) {
@@ -62,7 +64,7 @@ export function DocumentList({ documents, loading, error }: Props) {
                     {document.filename}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{typeLabel(document.content_type)}</Badge>
+                    <Badge variant="secondary">{typeLabel(document.filename)}</Badge>
                   </TableCell>
                   <TableCell className="text-right">{formatSize(document.size)}</TableCell>
                   <TableCell>{new Date(document.uploaded_at).toLocaleString()}</TableCell>

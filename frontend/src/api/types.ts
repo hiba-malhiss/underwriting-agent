@@ -1,5 +1,6 @@
-export interface ApplicationDocument {
-  name: string; // the blob's full name: "<application_id>/<random>-form.pdf"
+// Mirrors backend: documents/schemas.py (every kind of document)
+export interface StoredDocument {
+  name: string; // the blob's full name, e.g. "<applicant_id>/<random>-form.pdf"
   filename: string; // the name the user uploaded
   content_type: string;
   size: number; // bytes
@@ -7,5 +8,11 @@ export interface ApplicationDocument {
 }
 
 export interface DocumentListResponse {
-  documents: ApplicationDocument[];
+  documents: StoredDocument[];
+}
+
+// Where a page's documents come from: how to list them and how to upload one
+export interface DocumentSource {
+  list: () => Promise<StoredDocument[]>;
+  upload: (file: File) => Promise<StoredDocument>;
 }

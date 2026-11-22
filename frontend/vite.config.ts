@@ -13,8 +13,9 @@ export default defineConfig({
   },
   server: {
     port: 5174, // 5173 is the Amazon agent's
+    // Only API paths: they must not match a page path, or a refresh there would hit the backend
     proxy: {
-      "/applications": BACKEND,
+      "/documents": BACKEND,
       "/health": BACKEND,
     },
   },

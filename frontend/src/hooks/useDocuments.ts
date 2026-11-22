@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
-import { listDocuments, uploadDocument } from "../api/applications";
-import type { ApplicationDocument } from "../api/types";
+import type { DocumentSource, StoredDocument } from "../api/types";
 
-// An application's documents: loaded when the application opens, refreshed after an upload
-export function useApplicationDocuments(applicationId: string) {
-  const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
+// A page's documents: loaded when the page opens, refreshed after an upload.
+// `source` must be stable (a module constant or memoised), or this reloads every render.
+export function useDocuments(source: DocumentSource) {
+  const [documents, setDocuments] = useState<StoredDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      setDocuments(await listDocuments(applicationId));
+      setDocuments(await source.list());
       setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [applicationId]);
+  }, [source]);
 
   useEffect(() => {
     setLoading(true);
@@ -30,14 +30,14 @@ export function useApplicationDocuments(applicationId: string) {
     async (file: File) => {
       setUploading(true);
       try {
-        const document = await uploadDocument(applicationId, file);
+        const document = await source.upload(file);
         await refresh();
         return document;
       } finally {
         setUploading(false);
       }
     },
-    [applicationId, refresh],
+    [source, refresh],
   );
 
   return { documents, loading, uploading, error, upload, refresh };
