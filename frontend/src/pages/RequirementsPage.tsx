@@ -6,7 +6,7 @@ import { useDocuments } from "@/hooks/useDocuments";
 
 // The underwriting guidelines the eligibility check is based on
 export function RequirementsPage() {
-  const { documents, loading, uploading, error, upload } = useDocuments(requirementDocuments);
+  const { documents, loading, uploading, deleting, error, upload, remove } = useDocuments(requirementDocuments);
 
   return (
     <div className="space-y-6">
@@ -23,7 +23,13 @@ export function RequirementsPage() {
         uploading={uploading}
         onUpload={upload}
       />
-      <DocumentList documents={documents} loading={loading} error={error} />
+      <DocumentList
+        documents={documents}
+        loading={loading}
+        error={error}
+        deleting={deleting}
+        onDelete={remove}
+      />
     </div>
   );
 }

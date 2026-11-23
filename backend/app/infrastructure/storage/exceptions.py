@@ -32,6 +32,15 @@ class ContainerNotFoundError(StorageError):
         return str(self)
 
 
+class StoredFileNotFoundError(StorageError):
+    """The file isn't in the container (already deleted, or a wrong name). Answered with 404."""
+
+    status_code = 404
+
+    def public_message(self) -> str:
+        return str(self)
+
+
 class StorageAuthError(StorageError):
     """The app couldn't sign in to Azure, or its identity has no data role on the account.
     Answered with 503 and the message, which says what to fix."""
@@ -55,6 +64,12 @@ def to_storage_error(error: AzureError, container: str) -> StorageError:
             "'Storage Blob Data Contributor' role on the storage account (Access control "
             "(IAM)). Owner isn't enough: it manages the account, not its data."
         )
+    # A missing blob and a missing container are both 404s; the error code tells them apart
+    if (
+        isinstance(error, ResourceNotFoundError)
+        and getattr(error, "error_code", None) == "BlobNotFound"
+    ):
+        return StoredFileNotFoundError("File not found. It may have been deleted already.")
     if isinstance(error, ResourceNotFoundError):
         return ContainerNotFoundError(
             f"Container '{container}' not found. Create it in the Portal (Storage account → "

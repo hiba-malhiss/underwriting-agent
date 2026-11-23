@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from app.core.error_handlers import register_error_handlers
 from app.core.settings import settings
 from app.documents.controller import router as documents_router
-from app.documents.dependencies import create_document_stores
+from app.documents.dependencies import create_document_indexers, create_document_stores
 from app.infrastructure.azure_credential import azure_credential
 
 
@@ -22,9 +22,12 @@ async def lifespan(app: FastAPI):
     # One Azure identity for the whole app, shared by every Azure client
     credential = azure_credential(settings.azure_interactive_login, settings.azure_tenant_id)
     app.state.document_stores = create_document_stores(credential)
+    app.state.document_indexers = create_document_indexers(credential)
     yield
     for store in app.state.document_stores.values():
         await store.close()
+    for indexer in app.state.document_indexers.values():
+        await indexer.close()
     await credential.close()
 
 

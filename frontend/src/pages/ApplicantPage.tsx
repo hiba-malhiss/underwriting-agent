@@ -8,7 +8,7 @@ import { useDocuments } from "@/hooks/useDocuments";
 const source = applicantDocuments(APPLICANT_ID);
 
 export function ApplicantPage() {
-  const { documents, loading, uploading, error, upload } = useDocuments(source);
+  const { documents, loading, uploading, deleting, error, upload, remove } = useDocuments(source);
 
   return (
     <div className="space-y-6">
@@ -23,7 +23,13 @@ export function ApplicantPage() {
         uploading={uploading}
         onUpload={upload}
       />
-      <DocumentList documents={documents} loading={loading} error={error} />
+      <DocumentList
+        documents={documents}
+        loading={loading}
+        error={error}
+        deleting={deleting}
+        onDelete={remove}
+      />
     </div>
   );
 }

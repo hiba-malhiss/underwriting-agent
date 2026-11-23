@@ -3,6 +3,7 @@
     POST /documents?type=requirement                     underwriting guidelines
     POST /documents?type=applicant&applicant_id=<uuid>   an applicant's documents
     GET  /documents?type=…                               same parameters
+    DELETE /documents?type=…&name=<stored name>          one document (name from the list)
 
 Only HTTP here: read the request, call the service, shape the response. The rules and the
 storage calls are in service.py. Errors are raised, not caught: core/error_handlers.py
@@ -14,7 +15,7 @@ No authentication yet: keep this API local (don't expose it) until access contro
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, UploadFile, status
+from fastapi import APIRouter, Depends, Query, Response, UploadFile, status
 
 from app.documents.dependencies import get_document_service
 from app.documents.schemas import DocumentListResponse, DocumentResponse
@@ -47,3 +48,12 @@ async def list_documents(
 ) -> DocumentListResponse:
     documents = await service.list_documents(document_type, applicant_id)
     return DocumentListResponse(documents=[DocumentResponse.from_stored(d) for d in documents])
+
+
+# The stored name contains "/" for applicant documents, so it's a query parameter, not a path
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_document(
+    document_type: TypeParam, name: str, service: Service, applicant_id: UUID | None = None
+) -> Response:
+    await service.delete(document_type, name, applicant_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

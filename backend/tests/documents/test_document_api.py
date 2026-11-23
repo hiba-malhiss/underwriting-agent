@@ -10,9 +10,13 @@ os.environ.setdefault("AZURE_STORAGE_ACCOUNT_URL", "https://example.blob.core.wi
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.documents.dependencies import get_stores  # noqa: E402
+from app.documents.dependencies import get_indexers, get_stores  # noqa: E402
 from app.documents.types import DocumentType  # noqa: E402
-from app.infrastructure.storage.exceptions import ContainerNotFoundError, StorageError  # noqa: E402
+from app.infrastructure.storage.exceptions import (  # noqa: E402
+    ContainerNotFoundError,
+    StorageError,
+    StoredFileNotFoundError,
+)
 from app.infrastructure.storage.file_store import StoredDocument  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -25,6 +29,7 @@ class FakeStore:
 
     def __init__(self):
         self.uploads: list[dict] = []
+        self.deleted: list[str] = []
 
     async def upload(self, name, filename, data, content_type, metadata=None, overwrite=False):
         self.uploads.append({"name": name, "overwrite": overwrite, "metadata": metadata})
@@ -33,11 +38,14 @@ class FakeStore:
     async def list_files(self, prefix=""):
         return []
 
+    async def delete(self, name):
+        self.deleted.append(name)
+
 
 @pytest.fixture
 def stores():
     fakes = {document_type: FakeStore() for document_type in DocumentType}
-    app.dependency_overrides = {get_stores: lambda: fakes}
+    app.dependency_overrides = {get_stores: lambda: fakes, get_indexers: lambda: {}}
     yield fakes
     app.dependency_overrides = {}
 
@@ -110,9 +118,38 @@ class BrokenStore(FakeStore):
 )
 def test_storage_errors_become_clear_responses(client, error, code, detail):
     app.dependency_overrides = {
-        get_stores: lambda: {document_type: BrokenStore(error) for document_type in DocumentType}
+        get_indexers: lambda: {},
+        get_stores: lambda: {document_type: BrokenStore(error) for document_type in DocumentType},
     }
     response = client.get("/documents?type=requirement")
     app.dependency_overrides = {}
     assert response.status_code == code
     assert response.json()["detail"].startswith(detail)
+
+
+# DELETE answers 204 and removes the document from the right container
+def test_delete_removes_the_document(stores, client):
+    name = f"{APPLICANT_ID}/abc-form.pdf"
+    response = client.delete(
+        "/documents", params={"type": "applicant", "applicant_id": APPLICANT_ID, "name": name}
+    )
+    assert response.status_code == 204
+    assert stores[DocumentType.APPLICANT].deleted == [name]
+    assert stores[DocumentType.REQUIREMENT].deleted == []
+
+
+class MissingFileStore(FakeStore):
+    async def delete(self, name):
+        raise StoredFileNotFoundError("File not found. It may have been deleted already.")
+
+
+# Deleting a file that's already gone is a clear 404, not a storage failure
+def test_delete_of_a_missing_file_is_404(client):
+    app.dependency_overrides = {
+        get_indexers: lambda: {},
+        get_stores: lambda: {document_type: MissingFileStore() for document_type in DocumentType},
+    }
+    response = client.delete("/documents", params={"type": "requirement", "name": "gone.pdf"})
+    app.dependency_overrides = {}
+    assert response.status_code == 404
+    assert response.json()["detail"].startswith("File not found")

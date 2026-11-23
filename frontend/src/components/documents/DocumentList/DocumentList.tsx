@@ -1,6 +1,8 @@
-import { FileTextIcon, ImageIcon } from "lucide-react";
+import { FileTextIcon, ImageIcon, Trash2Icon } from "lucide-react";
+import { toast } from "sonner";
 import type { StoredDocument } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -15,6 +17,8 @@ interface Props {
   documents: StoredDocument[];
   loading: boolean;
   error: string | null;
+  deleting: string | null; // the stored name being deleted, if any
+  onDelete: (name: string) => Promise<unknown>;
 }
 
 function formatSize(bytes: number): string {
@@ -29,7 +33,17 @@ function typeLabel(filename: string): string {
   return dot === -1 ? "FILE" : filename.slice(dot + 1).toUpperCase();
 }
 
-export function DocumentList({ documents, loading, error }: Props) {
+export function DocumentList({ documents, loading, error, deleting, onDelete }: Props) {
+  const handleDelete = async (document: StoredDocument) => {
+    if (!window.confirm(`Delete ${document.filename}? This can't be undone from the app.`)) return;
+    try {
+      await onDelete(document.name);
+      toast.success(`${document.filename} deleted`);
+    } catch (e) {
+      toast.error(`${document.filename}: ${(e as Error).message}`);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -50,6 +64,9 @@ export function DocumentList({ documents, loading, error }: Props) {
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Size</TableHead>
                 <TableHead>Uploaded</TableHead>
+                <TableHead className="w-10">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -68,6 +85,17 @@ export function DocumentList({ documents, loading, error }: Props) {
                   </TableCell>
                   <TableCell className="text-right">{formatSize(document.size)}</TableCell>
                   <TableCell>{new Date(document.uploaded_at).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Delete ${document.filename}`}
+                      disabled={deleting !== null}
+                      onClick={() => void handleDelete(document)}
+                    >
+                      <Trash2Icon className="text-destructive" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

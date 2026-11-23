@@ -22,6 +22,15 @@ class Settings(BaseSettings):
     applicant_container: str = "underwriting-documents"
     requirements_container: str = "requirements"
 
+    # AI Search: Search service → Overview → Url. Optional: without it, nothing is re-indexed
+    # on upload/delete and the indexers only run on their schedule.
+    azure_search_endpoint: str | None = Field(
+        default=None, validation_alias="AZURE_SEARCH_ENDPOINT"
+    )
+    # The indexer that reads each container (AI Search → Indexers). Unset = not re-indexed.
+    applicant_indexer: str | None = Field(default=None, validation_alias="APPLICANT_INDEXER")
+    requirements_indexer: str | None = Field(default=None, validation_alias="REQUIREMENTS_INDEXER")
+
     # The largest document accepted, per file
     max_upload_mb: int = Field(default=20, gt=0)
 
