@@ -28,8 +28,15 @@ main.py          composition root only: shared clients + module wiring
 
 ## Frontend (`frontend/`)
 
-Vite + React + TypeScript, shadcn/ui + Tailwind, react-router, axios. `api/` one module per
-backend resource, `hooks/` for data, `components/<area>/<Component>/`, `pages/`.
+Vite + React + TypeScript, shadcn/ui + Tailwind, react-router, axios, TanStack Query.
+`components/<area>/<Component>/`, `pages/`.
+
+- **`api/<resource>.ts`, one module per backend resource:** the axios calls **and** all its
+  TanStack Query code (query keys, `useXQuery`, `useXMutation`), so any component can reuse them.
+  No separate `hooks/` folder for server data.
+- Mutations invalidate the related query keys in `onSuccess` (return the promise, so
+  `mutateAsync` resolves after the refetch). Components call `mutateAsync` in `try/catch` and show
+  the toast; the api module shows no UI.
 Page paths must never start with an API path that Vite proxies (or a refresh hits the backend).
 
 ## Working style
