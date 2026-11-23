@@ -20,8 +20,9 @@ main.py          composition root only: shared clients + module wiring
   **dependencies.py** = the `Depends` wiring and building the module's clients.
 - **Errors:** raise exceptions that subclass `core.errors.AppError` (they carry their status
   code). No `try/except` in routes; `core/error_handlers.py` answers them all.
-- **Abstractions:** add one only when it has a second user (a second implementation, a test fake,
-  or a second module). No layers that only forward calls.
+- **Abstractions:** add an interface (Protocol) only when there are two real implementations. A
+  test fake alone is not a reason: type with the concrete class and pass fakes in tests. No
+  layers that only forward calls.
 - **Azure sign-in:** one shared credential (`infrastructure/azure_credential.py`). No keys or
   secrets in code; Managed Identity on Azure, browser sign-in locally.
 
