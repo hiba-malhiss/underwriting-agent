@@ -1,14 +1,12 @@
-import { applicantDocuments } from "@/api/documents";
+import { useDeleteDocument, useDocumentsQuery, useUploadDocument } from "@/api/documents";
 import { DocumentList } from "@/components/documents/DocumentList/DocumentList";
 import { DocumentUpload } from "@/components/documents/DocumentUpload/DocumentUpload";
 import { APPLICANT_FILE_TYPES, APPLICANT_ID } from "@/config";
-import { useDocuments } from "@/hooks/useDocuments";
-
-// Created once, so the hook doesn't reload on every render
-const source = applicantDocuments(APPLICANT_ID);
 
 export function ApplicantPage() {
-  const { documents, loading, uploading, deleting, error, upload, remove } = useDocuments(source);
+  const documents = useDocumentsQuery("applicant", APPLICANT_ID);
+  const upload = useUploadDocument("applicant", APPLICANT_ID);
+  const remove = useDeleteDocument("applicant", APPLICANT_ID);
 
   return (
     <div className="space-y-6">
@@ -20,15 +18,15 @@ export function ApplicantPage() {
         title="Upload documents"
         description="Signed insurance form, medical reports, Emirates ID."
         fileTypes={APPLICANT_FILE_TYPES}
-        uploading={uploading}
-        onUpload={upload}
+        uploading={upload.isPending}
+        onUpload={upload.mutateAsync}
       />
       <DocumentList
-        documents={documents}
-        loading={loading}
-        error={error}
-        deleting={deleting}
-        onDelete={remove}
+        documents={documents.data ?? []}
+        loading={documents.isPending}
+        error={documents.error?.message ?? null}
+        deleting={remove.isPending ? remove.variables : null}
+        onDelete={remove.mutateAsync}
       />
     </div>
   );

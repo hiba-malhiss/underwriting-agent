@@ -1,12 +1,13 @@
-import { requirementDocuments } from "@/api/documents";
+import { useDeleteDocument, useDocumentsQuery, useUploadDocument } from "@/api/documents";
 import { DocumentList } from "@/components/documents/DocumentList/DocumentList";
 import { DocumentUpload } from "@/components/documents/DocumentUpload/DocumentUpload";
 import { REQUIREMENT_FILE_TYPES } from "@/config";
-import { useDocuments } from "@/hooks/useDocuments";
 
 // The underwriting guidelines the eligibility check is based on
 export function RequirementsPage() {
-  const { documents, loading, uploading, deleting, error, upload, remove } = useDocuments(requirementDocuments);
+  const documents = useDocumentsQuery("requirement");
+  const upload = useUploadDocument("requirement");
+  const remove = useDeleteDocument("requirement");
 
   return (
     <div className="space-y-6">
@@ -20,15 +21,15 @@ export function RequirementsPage() {
         title="Upload guidelines"
         description="Eligibility rules, required documents, medical criteria."
         fileTypes={REQUIREMENT_FILE_TYPES}
-        uploading={uploading}
-        onUpload={upload}
+        uploading={upload.isPending}
+        onUpload={upload.mutateAsync}
       />
       <DocumentList
-        documents={documents}
-        loading={loading}
-        error={error}
-        deleting={deleting}
-        onDelete={remove}
+        documents={documents.data ?? []}
+        loading={documents.isPending}
+        error={documents.error?.message ?? null}
+        deleting={remove.isPending ? remove.variables : null}
+        onDelete={remove.mutateAsync}
       />
     </div>
   );

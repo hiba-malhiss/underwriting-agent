@@ -10,10 +10,3 @@ export interface StoredDocument {
 export interface DocumentListResponse {
   documents: StoredDocument[];
 }
-
-// Where a page's documents come from: how to list, upload and delete them
-export interface DocumentSource {
-  list: () => Promise<StoredDocument[]>;
-  upload: (file: File) => Promise<StoredDocument>;
-  remove: (name: string) => Promise<void>; // `name` = StoredDocument.name (the stored name)
-}
