@@ -66,7 +66,12 @@ Applicant docs ─► read (OCR) ─► LLM fills parameter values (with sources
 - The code that runs rules: met / not met / unknown, with a reason per rule (+ tests)
 - MySQL connection and tables (created by the app at start; migrations come in v2)
 - Guidelines → Document Intelligence → LLM suggests parameters + rules (strict JSON) → quote check
-- Rules page: each rule next to its quote, **approve / reject**, then **Save** → version N
+- **New guidelines add, they don't replace:** the LLM gets the new document **plus all the current
+  parameters and rules**, and suggests **only additions**: new rules, and new parameters only if
+  needed. It reuses existing parameters (`age`, not a new `applicant_age`) and skips rules that
+  already exist
+- Rules page: each suggested rule next to its quote, **approve / reject**, then **Save** →
+  version N+1 = **all the current rules + the approved additions** (nothing is removed or changed)
 
 **Day 2: check an applicant (nothing about the applicant is saved)**
 - "Check an applicant" page: upload **all** the applicant's documents at once
@@ -100,8 +105,8 @@ Processing happens in the request with a loading spinner (10–30 s per document
 - Underwriter records the decision (accept / decline / refer) with a note
 - Migrations with Alembic
 - Computed parameters (age from date of birth, BMI) and table rules (e.g. BMI limit by age)
-- Rules page: edit a rule (not only approve / reject); new guidelines suggest **changes**
-      (add / update / delete) against the current rules, reusing existing parameters
+- Rules page: edit a rule (not only approve / reject); new guidelines can also suggest **updating
+  or deleting** existing rules (v1 only adds)
 - Version history: list, view, compare two versions, go back to an old one
 - Applicant status (`new` → `documents uploaded` → `values extracted` → `checked` → `decided`)
 - Page to fix flagged values (conflicts, quote not found, value not in the allowed list)
