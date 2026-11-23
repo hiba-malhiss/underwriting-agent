@@ -39,6 +39,11 @@ Vite + React + TypeScript, shadcn/ui + Tailwind, react-router, axios, TanStack Q
   the toast; the api module shows no UI.
 Page paths must never start with an API path that Vite proxies (or a refresh hits the backend).
 
+## Plan
+
+`docs/PLAN.md` is the build plan: the steps from scratch, per version (v1 / v2 / v3). Read it
+before starting work. It holds no progress; keep it a plan (update it when the plan changes).
+
 ## Working style
 
 - Go step by step; explain each step. Read a file before changing it — the user edits often.
