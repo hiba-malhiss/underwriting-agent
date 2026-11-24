@@ -21,6 +21,12 @@ class BadRequestError(AppError):
     status_code = 400
 
 
+class ConflictError(AppError):
+    """The request clashes with the current state (e.g. someone saved at the same time)."""
+
+    status_code = 409
+
+
 class BadGatewayError(AppError):
     """An external service (e.g. Azure) failed."""
 

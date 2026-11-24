@@ -13,6 +13,12 @@ from app.core.settings import settings
 from app.documents.controller import router as documents_router
 from app.documents.dependencies import create_document_indexers, create_document_stores
 from app.infrastructure.azure_credential import azure_credential
+from app.infrastructure.database import (
+    create_mysql_engine,
+    create_sessions,
+    create_tables,
+    is_reachable,
+)
 
 
 # startup => yield => shutdown
@@ -23,7 +29,19 @@ async def lifespan(app: FastAPI):
     credential = azure_credential(settings.azure_interactive_login, settings.azure_tenant_id)
     app.state.document_stores = create_document_stores(credential)
     app.state.document_indexers = create_document_indexers(credential)
+    # MySQL, when configured: tables are created if missing (v1: no migrations yet)
+    # app.state keeps the shared pool; repositories are built per request (rules/dependencies.py)
+    app.state.database = None
+    app.state.db_sessions = None
+    if settings.mysql_host and settings.mysql_user:
+        app.state.database = create_mysql_engine(
+            settings.mysql_host, settings.mysql_database, settings.mysql_user, credential
+        )
+        await create_tables(app.state.database)
+        app.state.db_sessions = create_sessions(app.state.database)
     yield
+    if app.state.database is not None:
+        await app.state.database.dispose()
     for store in app.state.document_stores.values():
         await store.close()
     for indexer in app.state.document_indexers.values():
@@ -38,12 +56,18 @@ app.include_router(documents_router)
 
 @app.get("/health")
 async def health():
-    # "down": check the storage settings in .env and that the containers exist
+    # "down": check the settings in .env, the containers, and the MySQL firewall (your IP)
     stores = app.state.document_stores
+    database = app.state.database
     return {
         "status": "ok",
         "storage": {
             document_type: "up" if await store.is_reachable() else "down"
             for document_type, store in stores.items()
         },
+        "database": (
+            "not configured"
+            if database is None
+            else ("up" if await is_reachable(database) else "down")
+        ),
     }

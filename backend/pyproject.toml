@@ -3,15 +3,18 @@ name = "underwriting-backend"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "aiomysql>=0.2.0",
     "azure-identity>=1.27.0",
     "azure-search-documents>=11.5",
     "azure-storage-blob[aio]>=12.20.0",
     "fastapi[standard]>=0.115.0",
     "pydantic-settings>=2.6.0",
+    "sqlalchemy[asyncio]>=2.0.30",
 ]
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.20",
     "mcp>=2.3.0",
     "pytest>=8.0.0",
     "ruff>=0.8.0",

@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     applicant_indexer: str | None = Field(default=None, validation_alias="APPLICANT_INDEXER")
     requirements_indexer: str | None = Field(default=None, validation_alias="REQUIREMENTS_INDEXER")
 
+    # MySQL (Azure Database for MySQL – Flexible Server). Optional: without it, the rulebook
+    # can't be saved. No password: the app signs in with an Entra token (see database.py)
+    mysql_host: str | None = Field(default=None, validation_alias="MYSQL_HOST")
+    mysql_database: str = Field(default="underwriting", validation_alias="MYSQL_DATABASE")
+    # The Entra user to sign in as: locally your user's principal name (Entra ID → Users →
+    # User principal name); on Azure, the Managed Identity's MySQL user
+    mysql_user: str | None = Field(default=None, validation_alias="MYSQL_USER")
+
     # The largest document accepted, per file
     max_upload_mb: int = Field(default=20, gt=0)
 
