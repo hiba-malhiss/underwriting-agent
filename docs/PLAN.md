@@ -34,8 +34,8 @@ Applicant docs ─► read (OCR) ─► LLM fills parameter values (with sources
 ## Main ideas
 
 - **Rules are data, not code.** Saved in the database as JSON, like
-  `{ "param": "age", "op": ">", "value": 65 }`. The code knows the *shape* of rules, not their
-  names, so new parameters work without code changes.
+  `{ "parameter": "age", "operator": "greater_than", "value": 65 }`. The code knows the *shape* of
+  rules, not their names, so new parameters work without code changes.
 - **Every rule has a source:** document, page, and the exact quote. The code checks the quote
   really is in the document, so the LLM can't make one up.
 - **Every applicant value has a source** too: which document and page it came from.
@@ -63,7 +63,8 @@ Applicant docs ─► read (OCR) ─► LLM fills parameter values (with sources
 **Day 1: rules**
 - Shapes for parameters and rules (condition and judgment), with sources; checks (known
       parameter, operator fits the type, value has the right type)
-- The code that runs rules: met / not met / unknown, with a reason per rule (+ tests)
+- The code that runs rules: for each rule the applicant **passed**, **not passed** (the rule's
+  outcome happens), **missing data**, or **needs judgment**, with an explanation (+ tests)
 - MySQL connection and tables (created by the app at start; migrations come in v2)
 - Guidelines → Document Intelligence → LLM suggests parameters + rules (strict JSON) → quote check
 - **New guidelines add, they don't replace:** the LLM gets the new document **plus all the current
@@ -90,8 +91,8 @@ Processing happens in the request with a loading spinner (10–30 s per document
 | Table | Main columns |
 |---|---|
 | `rulebook_versions` | `id`, `number`, `approved_at`, `note` |
-| `parameters` | `id`, `rulebook_version_id`, `code`, `type`, `allowed_values` (JSON), `description`, `source` (JSON) |
-| `rules` | `id`, `rulebook_version_id`, `code`, `kind` (condition / judgment), `when` (JSON), `outcome`, `source` (JSON) |
+| `parameters` | `id`, `rulebook_version_id`, `name`, `value_type`, `allowed_values` (JSON), `unit`, `description`, `source` (JSON) |
+| `rules` | `id`, `rulebook_version_id`, `name`, `description`, `rule_type` (automatic / judgment), `conditions` (JSON), `outcome` (decline / refer / require_document), `source` (JSON) |
 
 ---
 
