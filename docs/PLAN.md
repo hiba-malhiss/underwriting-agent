@@ -77,17 +77,29 @@ Applicant docs ─► read (OCR) ─► LLM fills parameter values (with sources
   - **A. Read the guidelines:** Document Intelligence (Layout) turns the PDF into **one continuous
     text** in reading order, plus where each page starts and ends in it. A paragraph split across
     two pages stays whole, and every quote can still be traced to its page (or pages)
-  - **B. LLM suggests additions:** the LLM gets the text (with `[page N]` markers) **plus all the
-    current parameters and rules**, and suggests **only additions**: new rules, and new parameters
-    only if needed, as strict JSON in the rulebook format. It reuses existing parameters (`age`,
-    not a new `applicant_age`) and skips rules that already exist. Then code checks each quote is
-    really in the text (ignoring line breaks and spaces, so quotes across pages still match), sets
-    the page from where the quote was found, and runs the rulebook checks
+  - **B. LLM suggests additions, in 2 steps** (like AUI: parameters first, then the rules that
+    use them). Both steps get the text (with `[page N]` markers) and a **snapshot** of the
+    current rulebook: a short list written by code (each parameter with its kind, type and
+    values; each rule as one line "IF … THEN …"), not the full JSON. Only **additions** come back
+    - **Step 1, what the guidelines require:** every statement that decides something, with its
+      exact quote, marked "needs a rule" or "no rule" (it only says something is fine), plus the
+      parameters those statements need (reusing the snapshot's names: `age`, not `applicant_age`)
+    - **Step 2, the rules:** one rule per statement that needs one, using only known parameters
+    - **Code checks after each step:** each quote is really in the text (ignoring line breaks and
+      spaces, so quotes across pages still match) and its page; the rulebook checks; a duplicate
+      of a current rule is skipped; and **coverage: every statement that needs a rule has one**
+      (so a missed rule shows up as a problem)
+    - **Repair loop:** if a step has problems, they go back to the LLM with its own answer, to
+      fix (at most 2 times); the answer with the fewest problems is kept. A plain loop, no
+      LangGraph (the flow is a straight line)
   - **C. API:** `POST /rules/proposals` (a guideline file → suggested additions; not stored) and
     `POST /rules/versions` (the approved additions → version N+1 = **all the current rules + the
     approved additions**; nothing is removed or changed)
   - **D. Rules page:** each suggested rule next to its quote and page, **approve / reject**, then
     **Save**; and the current version's parameters and rules
+  - **E. Answer key:** the rules a sample guideline should give, written by hand, and a script
+    that compares a proposal with it: found, missed, extra. It measures whether a change (prompt,
+    steps, model) made extraction better
 
 **Day 2: check an applicant (nothing about the applicant is saved)**
 - "Check an applicant" page: upload **all** the applicant's documents at once
@@ -136,7 +148,7 @@ Processing happens in the request with a loading spinner (10–30 s per document
 - Background processing after upload (status + auto refresh in the UI)
 - Results marked **out of date** when a document or value changes; run the rules again
 - Judgment rules: the LLM gives its view with the quote (still sent to a human)
-- Test applicants and a coverage check (guideline parts no rule quotes)
+- Test applicants (expected outcome for each)
 
 ## Version 3: bigger documents, stronger approval, deployment
 
