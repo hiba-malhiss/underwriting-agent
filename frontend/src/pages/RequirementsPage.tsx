@@ -86,6 +86,7 @@ export function RequirementsPage() {
         <ProposalReview
           key={`${propose.data.document}-${propose.submittedAt}`}
           proposal={propose.data}
+          currentParameters={current.data?.parameters ?? []}
           saving={save.isPending}
           onSave={saveApproved}
           onCancel={() => propose.reset()}

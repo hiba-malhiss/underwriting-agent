@@ -3,7 +3,9 @@ import { http } from "./http";
 
 // ---- Shapes: mirror backend rules/models.py and rules/schemas.py ----
 
-export type ValueType = "number" | "boolean" | "enum" | "list" | "text";
+export type ValueType = "number" | "boolean" | "enum" | "list" | "text" | "date";
+// Where the value comes from: the form, medical documents, which files were provided, or code
+export type ParameterKind = "application" | "medical" | "document";
 export type Outcome = "decline" | "refer" | "require_document";
 export type Scalar = number | boolean | string;
 
@@ -16,6 +18,7 @@ export interface Source {
 
 export interface Parameter {
   name: string;
+  kind: ParameterKind;
   value_type: ValueType;
   description: string;
   allowed_values?: string[] | null;
@@ -24,8 +27,8 @@ export interface Parameter {
 
 export interface Condition {
   parameter: string;
-  operator: string; // greater_than, equals, contains…
-  value: Scalar | string[];
+  operator: string; // greater_than, equals, contains, between, is_missing…
+  value?: Scalar | Scalar[] | null; // none for is_missing / is_present; [low, high] for between
 }
 
 // "all" = AND, "any" = OR; an item can be another group
