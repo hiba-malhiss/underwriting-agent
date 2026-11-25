@@ -6,7 +6,8 @@ Services OpenAI User' role on the Foundry resource). Temperature 0, so the same 
 same answer as far as the model allows.
 """
 
-from typing import TypeVar
+from dataclasses import dataclass
+from typing import Literal, TypeVar
 
 from azure.core.credentials_async import AsyncTokenCredential
 from azure.identity.aio import get_bearer_token_provider
@@ -19,6 +20,15 @@ AZURE_AI_SCOPE = "https://cognitiveservices.azure.com/.default"
 API_VERSION = "2024-10-21"  # supports structured outputs
 
 Output = TypeVar("Output", bound=BaseModel)
+
+
+@dataclass(frozen=True)
+class Message:
+    """One turn of the conversation: what we asked ("user") or what the model answered
+    ("assistant"). Earlier turns let the model fix its own answer."""
+
+    role: Literal["user", "assistant"]
+    content: str
 
 
 class LanguageModelError(BadGatewayError):
@@ -47,15 +57,17 @@ class LanguageModel:
         )
         return cls(client, deployment)
 
-    async def structured(self, system: str, user: str, output: type[Output]) -> Output:
-        """Ask the model and get its answer as `output` (strict JSON schema)."""
+    async def structured(
+        self, system: str, messages: list[Message], output: type[Output]
+    ) -> Output:
+        """Send the conversation and get the model's answer as `output` (strict JSON schema)."""
         try:
             response = await self._client.chat.completions.parse(
                 model=self._deployment,
                 temperature=0,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": user},
+                    *({"role": m.role, "content": m.content} for m in messages),
                 ],
                 response_format=output,
             )

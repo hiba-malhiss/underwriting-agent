@@ -9,6 +9,7 @@ changed in one place.
 - القوانين تكون automatic أو judgment.
 - نتائج القوانين تكون decline أو refer أو require_document.
 - كل Rule لازم تحتوي على اقتباس حرفي من المستند.
+- إذا فشلت الإجابة بالفحص، build_repair_prompt بيرجّع المشاكل للـ LLM ليصلّحها.
 """
 
 import json
@@ -85,3 +86,21 @@ def build_user_prompt(document_name: str, text: DocumentText, current: Rulebook 
         f"CURRENT RULEBOOK:\n{current_json}\n\n"
         f"GUIDELINES TEXT:\n{text.with_page_markers()}"
     )
+
+
+def build_repair_prompt(problems: list[str]) -> str:
+    """The message after an answer that failed the checks: the problems, and how to fix them."""
+    listed = "\n".join(f"- {problem}" for problem in problems)
+    return f"""Your answer failed these checks:
+{listed}
+
+Send the WHOLE answer again with every problem fixed:
+- Keep every rule and parameter that had no problem exactly as it was. Don't add new rules.
+- "quote not found": copy ONE continuous passage word for word from the guidelines text. If the
+  text has no such passage, remove the rule.
+- "unknown parameter": use a parameter that exists, or add it to parameters.
+- "not used by any rule": remove the parameter.
+- A name already used by something different: pick another name, or reuse the existing one if
+  it's the same fact.
+- Values and allowed_values must follow the format above (lower_snake_case values, the operators
+  allowed for the type, values in the parameter's allowed_values)."""

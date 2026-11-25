@@ -14,6 +14,10 @@ from dataclasses import dataclass, field
 
 from app.rules.models import Condition, ConditionGroup, Parameter, Rule
 
+# Starts the note on a parameter that gains allowed values: a note for the reviewer, not a mistake
+# for the model to fix
+NEW_ALLOWED_VALUES = "new allowed values"
+
 
 @dataclass
 class ParameterCheck:
@@ -54,7 +58,7 @@ def _new_values(existing: Parameter, parameter: Parameter, check: ParameterCheck
         check.skipped.append(f"parameter {parameter.name} (already in the rulebook)")
         return
     check.parameters.append(existing.model_copy(update={"allowed_values": known + extra}))
-    check.flag(parameter.name, f"new allowed values: {', '.join(extra)}")
+    check.flag(parameter.name, f"{NEW_ALLOWED_VALUES}: {', '.join(extra)}")
 
 
 def same_shape(a: Parameter, b: Parameter) -> bool:

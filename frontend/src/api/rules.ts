@@ -3,7 +3,8 @@ import { http } from "./http";
 
 // ---- Shapes: mirror backend rules/models.py and rules/schemas.py ----
 
-export type ValueType = "number" | "boolean" | "enum" | "list" | "text" | "date";
+export type ValueType =
+  "number" | "boolean" | "enum" | "list" | "text" | "date";
 // Where the value comes from: the form, medical documents, which files were provided, or code
 export type ParameterKind = "application" | "medical" | "document";
 export type Outcome = "decline" | "refer" | "require_document";
@@ -60,6 +61,7 @@ export interface Proposal {
   parameters: { parameter: Parameter; problems: string[] }[];
   rules: { rule: Rule; problems: string[] }[];
   skipped: string[];
+  repair_rounds: number; // how many times the model was asked to fix its answer
 }
 
 export interface SaveVersionRequest {
@@ -89,7 +91,10 @@ export async function saveRuleVersion(body: SaveVersionRequest) {
 export const currentRulebookKey = ["rules", "current"] as const;
 
 export function useCurrentRulebook() {
-  return useQuery({ queryKey: currentRulebookKey, queryFn: getCurrentRulebook });
+  return useQuery({
+    queryKey: currentRulebookKey,
+    queryFn: getCurrentRulebook,
+  });
 }
 
 export function useProposeRules() {
@@ -101,6 +106,7 @@ export function useSaveRuleVersion() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: saveRuleVersion,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: currentRulebookKey }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: currentRulebookKey }),
   });
 }

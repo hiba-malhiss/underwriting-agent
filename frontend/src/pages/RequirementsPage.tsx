@@ -1,9 +1,17 @@
 import { SparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { StoredDocument } from "@/api/types";
-import { useDeleteDocument, useDocumentsQuery, useUploadDocument } from "@/api/documents";
+import {
+  useDeleteDocument,
+  useDocumentsQuery,
+  useUploadDocument,
+} from "@/api/documents";
 import type { Parameter, Rule } from "@/api/rules";
-import { useCurrentRulebook, useProposeRules, useSaveRuleVersion } from "@/api/rules";
+import {
+  useCurrentRulebook,
+  useProposeRules,
+  useSaveRuleVersion,
+} from "@/api/rules";
 import { Button } from "@/components/ui/button";
 import { DocumentList } from "@/components/documents/DocumentList/DocumentList";
 import { DocumentUpload } from "@/components/documents/DocumentUpload/DocumentUpload";
@@ -24,7 +32,12 @@ export function RequirementsPage() {
   const suggestRules = async (document: StoredDocument) => {
     try {
       const proposal = await propose.mutateAsync(document.name);
-      toast.success(`${proposal.rules.length} rules suggested from ${document.filename}`);
+      const repaired = proposal.repair_rounds
+        ? ` (the AI fixed its answer ${proposal.repair_rounds}×)`
+        : "";
+      toast.success(
+        `${proposal.rules.length} rules suggested from ${document.filename}${repaired}`,
+      );
     } catch (e) {
       toast.error(`${document.filename}: ${(e as Error).message}`);
     }
@@ -51,7 +64,8 @@ export function RequirementsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Requirements</h1>
         <p className="text-sm text-muted-foreground">
-          Underwriting guidelines. Uploading a file with the same name replaces the old version.
+          Underwriting guidelines. Uploading a file with the same name replaces
+          the old version.
         </p>
       </div>
       <DocumentUpload
@@ -76,7 +90,7 @@ export function RequirementsPage() {
           >
             <SparklesIcon />
             {propose.isPending && propose.variables === document.name
-              ? "Reading… (up to a minute)"
+              ? "Reading… (1–2 minutes)"
               : "Suggest rules"}
           </Button>
         )}

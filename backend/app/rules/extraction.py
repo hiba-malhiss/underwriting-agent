@@ -44,6 +44,7 @@ class Proposal:
     parameters: list[SuggestedParameter]
     rules: list[SuggestedRule]
     skipped: list[str]
+    repair_rounds: int = 0  # how many times the model was asked to fix its answer
 
 
 def check_suggestions(

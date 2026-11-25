@@ -231,8 +231,8 @@ class FakeModel:
         self.answer = answer
         self.prompts: list[str] = []
 
-    async def structured(self, system, user, output):
-        self.prompts.append(user)
+    async def structured(self, system, messages, output):
+        self.prompts.append(messages[-1].content)
         return self.answer
 
 

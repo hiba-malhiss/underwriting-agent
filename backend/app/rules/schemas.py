@@ -31,6 +31,7 @@ class ProposalResponse(BaseModel):
     parameters: list[SuggestedParameterResponse]
     rules: list[SuggestedRuleResponse]
     skipped: list[str]
+    repair_rounds: int
 
     @classmethod
     def from_proposal(cls, proposal: Proposal) -> Self:
@@ -43,6 +44,7 @@ class ProposalResponse(BaseModel):
             ],
             rules=[SuggestedRuleResponse(rule=s.rule, problems=s.problems) for s in proposal.rules],
             skipped=proposal.skipped,
+            repair_rounds=proposal.repair_rounds,
         )
 
 
