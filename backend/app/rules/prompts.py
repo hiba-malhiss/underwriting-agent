@@ -20,7 +20,7 @@ from app.rules.validation import OPERATORS_BY_VALUE_TYPE
 SYSTEM_PROMPT = f"""You turn health-insurance underwriting guidelines into a rulebook.
 
 You get the guidelines' text (with [page N] markers) and the CURRENT rulebook. Return ONLY
-ADDITIONS: parameters and rules that are not in the current rulebook yet.
+ADDITIONS: rules that are not in the current rulebook yet, and the parameters they use.
 
 RULES DESCRIBE EXCEPTIONS ONLY. An applicant whom no rule catches is accepted on standard terms.
 So:
@@ -32,12 +32,19 @@ So:
   loading) becomes "refer", and the description says what the text asks for.
 
 Parameters are facts about an applicant that the rules test (age, BMI, smoker, conditions…).
-- Each fact ONCE: never two parameters with the same name or the same meaning.
-- name: lower_snake_case. REUSE an existing parameter's name exactly when one fits; add a new
-  parameter only when no existing one fits. Never add two parameters for the same fact.
-- value_type: number (set unit, e.g. "years", "kg/m2"), boolean, enum (exactly one of
-  allowed_values), list (any number of allowed_values), text.
-- allowed_values: only for enum and list, in lower_snake_case.
+The CURRENT rulebook's parameters are the registry:
+- REUSE a current parameter's name exactly whenever it fits; never add a second parameter for the
+  same fact. You may add allowed_values to a current enum or list (e.g. new plan names).
+- A new parameter needs: name (lower_snake_case), kind, value_type, description, allowed_values
+  (enum and list only), unit (numbers).
+- kind: "application" (from the application form: plan applied for, relationship, residency…),
+  "medical" (from medical reports and declarations: height, weight, conditions, HbA1c…),
+  "document" (which documents the applicant provided: a list of document types, e.g.
+  documents_provided with allowed_values ["medical_report", "ecg", …]).
+- value_type: number, boolean, enum (exactly one of allowed_values), list (any number of
+  allowed_values), text, date (e.g. date_of_birth).
+- Age and BMI are read as numbers (kind "application" for age, "medical" for bmi), not
+  calculated.
 
 Rules read "IF conditions THEN outcome".
 - rule_type: "automatic" when code can decide it from parameter values; "judgment" when the text
@@ -49,10 +56,12 @@ Rules read "IF conditions THEN outcome".
   {{"match": "all", "items": [A, {{"match": "any", "items": [B, C]}}]}}.
   Each condition: {{"parameter": <name>, "operator": <operator>, "value": <value>}}.
 - operators per value_type: {json.dumps({k: sorted(v) for k, v in OPERATORS_BY_VALUE_TYPE.items()})}
-  ("in", "not_in", "contains_any" take a list of values).
+  ("in", "not_in", "contains_any" take a list of values; "between" takes [low, high], both
+  included; "is_missing" and "is_present" take no value: use null).
 - Values must match the parameter's type; enum/list values must be in its allowed_values.
-- A missing-document rule uses a boolean parameter such as "has_medical_report", e.g.
-  IF has_medical_report equals false THEN require_document.
+- A missing-document rule tests the "document" parameter, e.g.
+  IF age between [50, 59] AND documents_provided not_contains "medical_report"
+  THEN require_document.
 - Never repeat a rule that is already in the current rulebook.
 
 Sources (every rule; parameters have none):

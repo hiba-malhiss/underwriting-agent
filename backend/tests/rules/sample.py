@@ -15,22 +15,26 @@ def sample_rulebook() -> Rulebook:
             "parameters": [
                 {
                     "name": "age",
+                    "kind": "application",
                     "value_type": "number",
                     "unit": "years",
                     "description": "Age",
                 },
                 {
                     "name": "bmi",
+                    "kind": "medical",
                     "value_type": "number",
                     "description": "Body mass index",
                 },
                 {
                     "name": "smoker",
+                    "kind": "medical",
                     "value_type": "boolean",
                     "description": "Smokes tobacco",
                 },
                 {
                     "name": "conditions",
+                    "kind": "medical",
                     "value_type": "list",
                     "description": "Known conditions",
                     "allowed_values": ["diabetes_type_2", "heart_disease", "asthma"],

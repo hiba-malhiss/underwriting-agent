@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 from app.infrastructure.document_reader import DocumentText, PageSpan
 from app.rules.extraction import check_suggestions
-from app.rules.models import Rulebook
+from app.rules.models import Parameter, Rulebook
 from app.rules.prompts import build_user_prompt
 from app.rules.repository import RulebookVersion
 from app.rules.service import RulesService
@@ -32,6 +32,7 @@ def suggestion(parameters: list[dict], rules: list[dict]) -> Rulebook:
 
 BMI = {
     "name": "bmi",
+    "kind": "medical",
     "value_type": "number",
     "description": "Body mass index",
 }
@@ -154,17 +155,44 @@ def test_a_reused_name_with_a_different_meaning_is_flagged_not_dropped():
         "the name 'max_age' is already used by a different rule; rename it"
     ]
 
-    as_text = {**BMI, "value_type": "text"}
-    parameter = check(suggestion([as_text], []), sample_rulebook()).parameters[0]
-    assert parameter.problems[0].startswith("the name 'bmi' is already used by a different")
+    # A rulebook parameter, redefined with another type
+    region = {"name": "region", "kind": "application", "description": "Region"}
+    current = sample_rulebook().model_copy(
+        update={
+            "parameters": sample_rulebook().parameters
+            + [Parameter(**region, value_type="enum", allowed_values=["north", "south"])]
+        }
+    )
+    parameter = check(suggestion([{**region, "value_type": "text"}], []), current).parameters[0]
+    assert parameter.problems[0].startswith("the name 'region' is already used by a different")
 
 
 # A new parameter that no rule uses is probably made up or left over
 def test_a_new_parameter_no_rule_uses_is_flagged():
-    unused = {"name": "eye_colour", "value_type": "text", "description": "Eye colour"}
+    unused = {"name": "eye_colour", "kind": "medical", "value_type": "text", "description": "Eye"}
     proposal = check(suggestion([BMI, unused], [BMI_RULE]))
     problems = {p.parameter.name: p.problems for p in proposal.parameters}
     assert problems == {"bmi": [], "eye_colour": ["not used by any rule"]}
+
+
+# A list in the rulebook can gain values (e.g. a new plan name): kept, and flagged for review
+def test_new_values_for_an_existing_list_are_kept_and_flagged():
+    current = sample_rulebook()  # conditions: diabetes_type_2, heart_disease, asthma
+    conditions = {
+        "name": "conditions",
+        "kind": "medical",
+        "value_type": "list",
+        "description": "Known conditions",
+        "allowed_values": ["asthma", "cancer"],
+    }
+    parameter = check(suggestion([conditions], []), current).parameters[0]
+    assert parameter.parameter.allowed_values == [
+        "diabetes_type_2",
+        "heart_disease",
+        "asthma",
+        "cancer",
+    ]
+    assert parameter.problems == ["new allowed values: cancer"]
 
 
 # Rulebook problems are attached to the suggested item they're about

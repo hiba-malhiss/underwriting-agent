@@ -14,6 +14,7 @@ from app.infrastructure.llm import LanguageModel
 from app.infrastructure.storage.blob import BlobStore
 from app.rules.extraction import Proposal, check_suggestions
 from app.rules.models import Rulebook
+from app.rules.parameter_checks import merge_parameters
 from app.rules.prompts import SYSTEM_PROMPT, build_user_prompt
 from app.rules.repository import RulebookRepository, RulebookVersion
 from app.rules.validation import ensure_valid
@@ -68,7 +69,7 @@ class RulesService:
             )
         base = current.rulebook if current else Rulebook(parameters=[], rules=[])
         combined = Rulebook(
-            parameters=base.parameters + additions.parameters,
+            parameters=merge_parameters(base.parameters, additions.parameters),
             rules=base.rules + additions.rules,
         )
         ensure_valid(combined)

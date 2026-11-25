@@ -1,7 +1,8 @@
 """Check rules and parameters suggested by the LLM.
 
 Steps:
-1. Remove duplicates: rules by what they do (not their name), parameters by name + type.
+1. Parameters are checked against the current rulebook, the registry (parameter_checks.py);
+   rules are deduplicated by what they do, not their name.
 2. Verify each rule's quote against the document (parameters have no quote).
 3. Validate the combined rulebook; flag new parameters that no rule uses.
 4. Return suggestions and problems for human review.
@@ -20,6 +21,7 @@ from app.rules.models import (
     Rulebook,
     Source,
 )
+from app.rules.parameter_checks import check_parameters, merge_parameters, used_parameters
 from app.rules.validation import find_problems
 
 
@@ -54,11 +56,8 @@ def check_suggestions(
 
     current = current or Rulebook(parameters=[], rules=[])
 
-    # 1. Find new parameters and rules.
-    parameters, skipped_params, param_errors = check_parameters(
-        suggested.parameters,
-        current.parameters,
-    )
+    # 1. Find new parameters (against the current rulebook) and new rules.
+    params = check_parameters(suggested.parameters, current.parameters)
 
     rules, skipped_rules, rule_errors = check_rules(
         suggested.rules,
@@ -70,15 +69,15 @@ def check_suggestions(
 
     # 3. Validate old + new rules together.
     combined = Rulebook(
-        parameters=current.parameters + parameters,
+        parameters=merge_parameters(current.parameters, params.parameters),
         rules=current.rules + [r for r, _ in located_rules],
     )
 
     validation_errors = collect_validation_errors(
         combined,
-        {**param_errors, **rule_errors},
+        {**params.errors, **rule_errors},
     )
-    unused_errors = flag_unused_parameters(parameters, combined.rules)
+    unused_errors = flag_unused_parameters(params.parameters, combined)
 
     # 4. Prepare suggestions for human review.
     return Proposal(
@@ -88,12 +87,12 @@ def check_suggestions(
             SuggestedParameter(
                 p,
                 merge_errors(
-                    param_errors.get(f"parameter {p.name}", []),
+                    params.errors.get(f"parameter {p.name}", []),
                     validation_errors.get(f"parameter {p.name}", []),
                     unused_errors.get(f"parameter {p.name}", []),
                 ),
             )
-            for p in parameters
+            for p in params.parameters
         ],
         rules=[
             SuggestedRule(
@@ -106,52 +105,7 @@ def check_suggestions(
             )
             for r, quote_errors in located_rules
         ],
-        skipped=skipped_params + skipped_rules,
-    )
-
-
-def check_parameters(
-    suggested: list[Parameter],
-    current: list[Parameter],
-):
-    """Find new parameters and flag name conflicts."""
-
-    existing_by_name = {p.name: p for p in current}
-
-    new_parameters = []
-    skipped = []
-    errors = {}
-
-    for parameter in suggested:
-        name = parameter.name
-        existing = existing_by_name.get(name)
-
-        # Same name and definition -> skip.
-        if existing is not None and same_parameter(existing, parameter):
-            skipped.append(f"parameter {name} (already in the rulebook)")
-            continue
-
-        problems = []
-
-        # Same name, different definition -> flag.
-        if existing is not None:
-            problems.append(
-                f"the name '{name}' is already used by a "
-                f"different parameter ({existing.value_type}); "
-                "pick another name or reuse it"
-            )
-
-        new_parameters.append(parameter)
-
-        if problems:
-            errors[f"parameter {name}"] = problems
-
-    return new_parameters, skipped, errors
-
-
-def same_parameter(a: Parameter, b: Parameter) -> bool:
-    return a.value_type == b.value_type and sorted(a.allowed_values or []) == sorted(
-        b.allowed_values or []
+        skipped=params.skipped + skipped_rules,
     )
 
 
@@ -283,33 +237,15 @@ def locate_source(
 
 def flag_unused_parameters(
     new_parameters: list[Parameter],
-    rules: list[Rule],
+    rulebook: Rulebook,
 ) -> dict[str, list[str]]:
     """A new parameter that no rule uses is probably made up or left over."""
-
-    used = {
-        condition.parameter
-        for rule in rules
-        if rule.conditions
-        for condition in iter_conditions(rule.conditions)
-    }
-
+    used = used_parameters(rulebook.rules)
     return {
         f"parameter {p.name}": ["not used by any rule"]
         for p in new_parameters
         if p.name not in used
     }
-
-
-def iter_conditions(node: Condition | ConditionGroup):
-    """Every condition in a (nested) group."""
-
-    if isinstance(node, Condition):
-        yield node
-        return
-
-    for item in node.items:
-        yield from iter_conditions(item)
 
 
 def collect_validation_errors(

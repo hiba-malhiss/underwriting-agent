@@ -26,7 +26,12 @@ from pydantic import BaseModel, ConfigDict, Field
 # Names are stable identifiers the rules point to: lower_snake_case, e.g. "age", "max_age"
 NAME_PATTERN = r"^[a-z][a-z0-9_]*$"
 
-ValueType = Literal["number", "boolean", "enum", "list", "text"]
+ValueType = Literal["number", "boolean", "enum", "list", "text", "date"]
+
+# Where a parameter's value comes from:
+# application: the application form · medical: medical reports and declarations ·
+# document: which files were provided (filled by code from the uploads' document types)
+ParameterKind = Literal["application", "medical", "document"]
 
 # Operators are words, not symbols (">="): clearer for reviewers, harder for the LLM to garble
 Operator = Literal[
@@ -41,6 +46,9 @@ Operator = Literal[
     "contains",  # a list parameter contains a value
     "not_contains",
     "contains_any",  # a list parameter contains at least one of the values
+    "between",  # a number within [low, high], both included
+    "is_missing",  # no value was found (takes no value)
+    "is_present",  # a value was found (takes no value)
 ]
 
 # automatic: code decides from the conditions; judgment: always goes to a human
@@ -70,10 +78,15 @@ class Source(Strict):
 class Parameter(Strict):
     """A fact about an applicant that the rules use, e.g. age, BMI, smoker, conditions.
 
+    Every parameter comes from the guidelines (through the LLM, approved by a human); the code
+    knows no parameter by name. The current rulebook is the registry: rules may only use the
+    parameters it declares.
+
     No source quote: the same fact appears in many sentences, and every RULE that uses it has
     its own quote saying why it matters."""
 
     name: str = Field(pattern=NAME_PATTERN)
+    kind: ParameterKind
     value_type: ValueType
     description: str
     # enum: the one value it can take; list: the values it can contain
@@ -86,7 +99,8 @@ class Condition(Strict):
 
     parameter: str
     operator: Operator
-    value: Scalar | list[str]
+    # None only for is_missing / is_present; a list for in, not_in, contains_any, between
+    value: Scalar | list[Scalar] | None = None
 
 
 class ConditionGroup(Strict):

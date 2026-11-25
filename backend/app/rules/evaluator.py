@@ -36,6 +36,7 @@ OPERATOR_WORDS = {
     "contains": "includes",
     "not_contains": "excludes",
     "contains_any": "includes any of",
+    "between": "between",
 }
 
 
@@ -91,6 +92,11 @@ def _group(group: ConditionGroup, values: dict[str, Any], notes: list[str], miss
 
 def _condition(condition: Condition, values: dict[str, Any], notes: list[str], missing: list[str]):
     value = values.get(condition.parameter)
+    if condition.operator in ("is_missing", "is_present"):
+        # Here a missing value IS the answer, never "missing data"
+        result = (value is None) == (condition.operator == "is_missing")
+        notes.append(f"{condition.parameter} is {'missing' if value is None else 'present'}")
+        return result
     if value is None:
         missing.append(condition.parameter)
         return UNKNOWN
@@ -102,7 +108,7 @@ def _condition(condition: Condition, values: dict[str, Any], notes: list[str], m
         notes.append(f"{condition.parameter} has an invalid value ({value!r})")
         return UNKNOWN
     expected = condition.value
-    shown = ", ".join(expected) if isinstance(expected, list) else expected
+    shown = ", ".join(map(str, expected)) if isinstance(expected, list) else expected
     notes.append(
         f"{condition.parameter} is {_show(value)} "
         f"({'' if result else 'not '}{OPERATOR_WORDS[condition.operator]} {shown})"
@@ -134,6 +140,9 @@ def _compare(actual: Any, operator: str, expected: Any) -> bool:
             return expected not in _as_list(actual)
         case "contains_any":
             return any(item in _as_list(actual) for item in expected)
+        case "between":
+            low, high = expected
+            return low <= actual <= high
     raise ValueError(f"Unknown operator {operator}")
 
 

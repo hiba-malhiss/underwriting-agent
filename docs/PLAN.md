@@ -66,6 +66,13 @@ Applicant docs ─► read (OCR) ─► LLM fills parameter values (with sources
 - The code that runs rules: for each rule the applicant **passed**, **not passed** (the rule's
   outcome happens), **missing data**, or **needs judgment**, with an explanation (+ tests)
 - MySQL connection and tables (created by the app at start; migrations come in v2)
+- **Parameters come from the guidelines, nothing is built in** (like AUI's parameters.aui.json):
+  the current rulebook is the registry. The LLM reuses its names and adds new ones when needed;
+  rules may only use declared parameters. Each parameter has a **kind**: `application` (the form),
+  `medical` (reports and declarations) or `document` (which files were provided, filled by code
+  from the uploads' types). Checks: allowed values are snake_case codes; a list can gain values
+  (flagged)
+- **Operators** include `between` ([low, high]) and `is_missing` / `is_present`
 - Rules from guidelines, in 4 parts:
   - **A. Read the guidelines:** Document Intelligence (Layout) turns the PDF into **one continuous
     text** in reading order, plus where each page starts and ends in it. A paragraph split across
@@ -106,6 +113,11 @@ Processing happens in the request with a loading spinner (10–30 s per document
 
 ## Version 2: nicer and safer
 
+- **Computed parameters** (like AUI's computations): a parameter of kind `computed` with a
+  **formula** in the rulebook, e.g. `round({weight_kg} / ({height_cm} / 100) ** 2, 1)` for BMI or
+  `years_since({date_of_birth})` for age, run by a small safe evaluator (no `eval`). Checks: the
+  formula parses, uses declared parameters, and has no cycles. Until then, age and BMI are read
+  from the documents as numbers
 - **Save applicants:** create an applicant (name), list them, open one; their documents in Blob
   Storage; add documents later and merge with the values already extracted
 - Tables: `applicants` (`id`, `full_name`, `created_at`), `extracted_values` (`applicant_id`,
@@ -113,7 +125,7 @@ Processing happens in the request with a loading spinner (10–30 s per document
   `rulebook_version_id`, `created_at`), `rule_results`, `decisions`
 - Underwriter records the decision (accept / decline / refer) with a note
 - Migrations with Alembic
-- Computed parameters (age from date of birth, BMI) and table rules (e.g. BMI limit by age)
+- Table rules (e.g. BMI limit by age band)
 - Rules page: edit a rule (not only approve / reject); new guidelines can also suggest **updating
   or deleting** existing rules (v1 only adds)
 - Version history: list, view, compare two versions, go back to an old one

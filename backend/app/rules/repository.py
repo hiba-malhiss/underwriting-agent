@@ -80,6 +80,7 @@ def _to_row(rulebook: Rulebook, version: int, note: str | None) -> RulebookVersi
         parameters=[
             ParameterRow(
                 name=p.name,
+                kind=p.kind,
                 value_type=p.value_type,
                 description=p.description,
                 allowed_values=p.allowed_values,
@@ -112,6 +113,7 @@ def _to_version(row: RulebookVersionRow) -> RulebookVersion:
             "parameters": [
                 {
                     "name": p.name,
+                    "kind": p.kind,
                     "value_type": p.value_type,
                     "description": p.description,
                     "allowed_values": p.allowed_values,

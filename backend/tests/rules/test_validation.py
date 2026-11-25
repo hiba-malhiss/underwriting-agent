@@ -86,6 +86,7 @@ def test_parameters_are_checked_too():
     data["parameters"].append(
         {
             "name": "region",
+            "kind": "application",
             "value_type": "enum",
             "description": "Region",
         }
@@ -141,3 +142,13 @@ def test_the_old_two_list_shape_is_refused():
                 "any_of": [{"parameter": "age", "operator": "less_than", "value": 0}],
             }
         )
+
+
+# Allowed values are codes, so rules and extracted values match exactly
+def test_allowed_values_must_be_snake_case_codes():
+    data = sample_rulebook().model_dump()
+    data["parameters"][3]["allowed_values"] = ["asthma", "Type 2 diabetes"]
+    problems = find_problems(Rulebook.model_validate(data))
+    assert ("parameter conditions", "allowed values must be lower_snake_case: Type 2 diabetes") in {
+        (p.where, p.message) for p in problems
+    }

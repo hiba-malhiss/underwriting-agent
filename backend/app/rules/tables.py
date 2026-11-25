@@ -41,6 +41,7 @@ class ParameterRow(Base):
         ForeignKey("rulebook_versions.id", ondelete="CASCADE")
     )
     name: Mapped[str] = mapped_column(String(100))
+    kind: Mapped[str] = mapped_column(String(20))  # application, medical, document
     value_type: Mapped[str] = mapped_column(String(20))
     description: Mapped[str] = mapped_column(Text)
     allowed_values: Mapped[list[str] | None] = mapped_column(JSON)
