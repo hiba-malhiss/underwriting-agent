@@ -16,12 +16,15 @@ import json
 
 from app.infrastructure.document_reader import DocumentText
 from app.rules.models import Rulebook
+from app.rules.snapshot import snapshot
 from app.rules.validation import OPERATORS_BY_VALUE_TYPE
 
 SYSTEM_PROMPT = f"""You turn health-insurance underwriting guidelines into a rulebook.
 
-You get the guidelines' text (with [page N] markers) and the CURRENT rulebook. Return ONLY
-ADDITIONS: rules that are not in the current rulebook yet, and the parameters they use.
+You get the guidelines' text (with [page N] markers) and a snapshot of the CURRENT rulebook (one
+line per parameter: name (kind, type: allowed values, unit): description; one line per rule:
+IF conditions THEN outcome). Return ONLY ADDITIONS: rules that are not in the current rulebook
+yet, and the parameters they use.
 
 RULES DESCRIBE EXCEPTIONS ONLY. An applicant whom no rule catches is accepted on standard terms.
 So:
@@ -35,7 +38,8 @@ So:
 Parameters are facts about an applicant that the rules test (age, BMI, smoker, conditions…).
 The CURRENT rulebook's parameters are the registry:
 - REUSE a current parameter's name exactly whenever it fits; never add a second parameter for the
-  same fact. You may add allowed_values to a current enum or list (e.g. new plan names).
+  same fact. You may add allowed_values to a current enum or list (e.g. new plan names): send
+  that parameter again in full, with its current and new values.
 - A new parameter needs: name (lower_snake_case), kind, value_type, description, allowed_values
   (enum and list only), unit (numbers).
 - kind: "application" (from the application form: plan applied for, relationship, residency…),
@@ -78,12 +82,9 @@ description: one short plain-English sentence."""
 
 
 def build_user_prompt(document_name: str, text: DocumentText, current: Rulebook | None) -> str:
-    current_json = (current or Rulebook(parameters=[], rules=[])).model_dump_json(
-        exclude_none=True, indent=1
-    )
     return (
         f"File name: {document_name}\n\n"
-        f"CURRENT RULEBOOK:\n{current_json}\n\n"
+        f"CURRENT RULEBOOK (snapshot):\n{snapshot(current)}\n\n"
         f"GUIDELINES TEXT:\n{text.with_page_markers()}"
     )
 

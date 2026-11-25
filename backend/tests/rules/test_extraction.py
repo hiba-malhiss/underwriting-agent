@@ -211,7 +211,7 @@ def test_rulebook_problems_are_attached_to_their_item():
 def test_the_prompt_has_the_file_name_the_current_rulebook_and_page_markers():
     prompt = build_user_prompt(GUIDE, TEXT, sample_rulebook())
     assert "File name: guidelines.pdf" in prompt
-    assert '"name": "max_age"' in prompt
+    assert "- max_age: IF age greater_than 65 THEN decline" in prompt
     assert "[page 2]\nmedical report." in prompt
 
 
@@ -255,4 +255,4 @@ def test_service_proposes_additions_to_the_current_version():
 
     assert proposal.based_on_version == 3
     assert [r.rule.name for r in proposal.rules] == ["high_bmi_report"]
-    assert '"name": "max_age"' in model.prompts[0]  # the model saw the current rules
+    assert "- max_age: IF" in model.prompts[0]  # the model saw the current rules
