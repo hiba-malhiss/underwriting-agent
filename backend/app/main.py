@@ -19,6 +19,7 @@ from app.infrastructure.database import (
     create_tables,
     is_reachable,
 )
+from app.infrastructure.document_reader import DocumentReader
 
 
 # startup => yield => shutdown
@@ -29,6 +30,12 @@ async def lifespan(app: FastAPI):
     credential = azure_credential(settings.azure_interactive_login, settings.azure_tenant_id)
     app.state.document_stores = create_document_stores(credential)
     app.state.document_indexers = create_document_indexers(credential)
+    # Document Intelligence, when configured (reads guidelines and applicants' documents)
+    app.state.document_reader = (
+        DocumentReader.connect(settings.document_intelligence_endpoint, credential)
+        if settings.document_intelligence_endpoint
+        else None
+    )
     # MySQL, when configured: tables are created if missing (v1: no migrations yet)
     # app.state keeps the shared pool; repositories are built per request (rules/dependencies.py)
     app.state.database = None
@@ -42,6 +49,8 @@ async def lifespan(app: FastAPI):
     yield
     if app.state.database is not None:
         await app.state.database.dispose()
+    if app.state.document_reader is not None:
+        await app.state.document_reader.close()
     for store in app.state.document_stores.values():
         await store.close()
     for indexer in app.state.document_indexers.values():

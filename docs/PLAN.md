@@ -66,13 +66,21 @@ Applicant docs ─► read (OCR) ─► LLM fills parameter values (with sources
 - The code that runs rules: for each rule the applicant **passed**, **not passed** (the rule's
   outcome happens), **missing data**, or **needs judgment**, with an explanation (+ tests)
 - MySQL connection and tables (created by the app at start; migrations come in v2)
-- Guidelines → Document Intelligence → LLM suggests parameters + rules (strict JSON) → quote check
-- **New guidelines add, they don't replace:** the LLM gets the new document **plus all the current
-  parameters and rules**, and suggests **only additions**: new rules, and new parameters only if
-  needed. It reuses existing parameters (`age`, not a new `applicant_age`) and skips rules that
-  already exist
-- Rules page: each suggested rule next to its quote, **approve / reject**, then **Save** →
-  version N+1 = **all the current rules + the approved additions** (nothing is removed or changed)
+- Rules from guidelines, in 4 parts:
+  - **A. Read the guidelines:** Document Intelligence (Layout) turns the PDF into **one continuous
+    text** in reading order, plus where each page starts and ends in it. A paragraph split across
+    two pages stays whole, and every quote can still be traced to its page (or pages)
+  - **B. LLM suggests additions:** the LLM gets the text (with `[page N]` markers) **plus all the
+    current parameters and rules**, and suggests **only additions**: new rules, and new parameters
+    only if needed, as strict JSON in the rulebook format. It reuses existing parameters (`age`,
+    not a new `applicant_age`) and skips rules that already exist. Then code checks each quote is
+    really in the text (ignoring line breaks and spaces, so quotes across pages still match), sets
+    the page from where the quote was found, and runs the rulebook checks
+  - **C. API:** `POST /rules/proposals` (a guideline file → suggested additions; not stored) and
+    `POST /rules/versions` (the approved additions → version N+1 = **all the current rules + the
+    approved additions**; nothing is removed or changed)
+  - **D. Rules page:** each suggested rule next to its quote and page, **approve / reject**, then
+    **Save**; and the current version's parameters and rules
 
 **Day 2: check an applicant (nothing about the applicant is saved)**
 - "Check an applicant" page: upload **all** the applicant's documents at once

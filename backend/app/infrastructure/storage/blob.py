@@ -1,9 +1,11 @@
-"""Azure Blob Storage access: store a file under a name, list files under a prefix, delete one.
+"""Azure Blob Storage access: store a file under a name, list files under a prefix, and download
+or delete one.
 
 One BlobStore per container. The callers decide the names; the naming rules and accepted
 formats per kind of document live in documents/.
 
-This module only stores, lists and deletes. It knows nothing about HTTP or what files are accepted.
+This module only stores, lists, downloads and deletes. It knows nothing about HTTP or what files
+are accepted.
 """
 
 from urllib.parse import quote, unquote
@@ -89,6 +91,14 @@ class BlobStore(FileStore):
             raise to_storage_error(error, self._container_name) from error
 
         return sorted(documents, key=lambda document: document.uploaded_at)
+
+    async def download(self, name: str) -> bytes:
+        """The blob's content (a missing blob is StoredFileNotFoundError, 404)."""
+        try:
+            stream = await self._container.get_blob_client(name).download_blob()
+            return await stream.readall()
+        except AzureError as error:
+            raise to_storage_error(error, self._container_name) from error
 
     async def delete(self, name: str) -> None:
         """Delete the blob `name` (and its snapshots). With soft delete on in the storage account,

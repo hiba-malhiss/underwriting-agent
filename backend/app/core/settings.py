@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     applicant_indexer: str | None = Field(default=None, validation_alias="APPLICANT_INDEXER")
     requirements_indexer: str | None = Field(default=None, validation_alias="REQUIREMENTS_INDEXER")
 
+    # Document Intelligence: the Foundry (AI Services) resource's endpoint (Overview → Endpoint).
+    # Optional: without it, documents can't be read.
+    document_intelligence_endpoint: str | None = Field(
+        default=None, validation_alias="DOCUMENT_INTELLIGENCE_ENDPOINT"
+    )
+
     # MySQL (Azure Database for MySQL – Flexible Server). Optional: without it, the rulebook
     # can't be saved. No password: the app signs in with an Entra token (see database.py)
     mysql_host: str | None = Field(default=None, validation_alias="MYSQL_HOST")
