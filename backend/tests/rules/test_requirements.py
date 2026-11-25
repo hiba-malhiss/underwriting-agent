@@ -65,19 +65,20 @@ def draft(*rules: tuple[str, int], parameters=(BMI,)) -> DraftRulebook:
 
 
 def test_requirements_are_numbered_and_their_quotes_checked():
-    found = check_requirements(
+    found, problems = check_requirements(
         requirements((BMI_40, "add_rule"), ("Made up sentence.", "add_rule")), TEXT, GUIDE
     )
     assert [r.number for r in found] == [1, 2]
     assert (found[0].source.page, found[0].source.last_page, found[0].problems) == (1, 2, [])
     assert found[1].problems == ["quote not found in the document (made up or paraphrased?)"]
+    assert problems == ["requirement 2: quote not found in the document (made up or paraphrased?)"]
 
 
 # ---- Step 2 ----
 
 
 def test_a_rule_gets_its_requirements_quote_and_page():
-    found = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
+    found, _ = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
     rulebook, problems = rules_from_drafts(draft(("high_bmi_report", 1)), found)
     assert problems == []
     assert rulebook.rules[0].source.quote == BMI_40
@@ -85,14 +86,14 @@ def test_a_rule_gets_its_requirements_quote_and_page():
 
 
 def test_a_rule_pointing_to_no_requirement_is_left_out_and_reported():
-    found = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
+    found, _ = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
     rulebook, problems = rules_from_drafts(draft(("high_bmi_report", 7)), found)
     assert rulebook.rules == []
     assert problems == ["rule high_bmi_report: there is no requirement 7"]
 
 
 def test_coverage_finds_requirements_with_no_rule():
-    found = check_requirements(
+    found, _ = check_requirements(
         requirements((BMI_40, "add_rule"), (OVER_65, "add_rule"), (HEART, "no_rule")), TEXT, GUIDE
     )
     missed = missed_requirements(draft(("high_bmi_report", 1)), found)
@@ -105,7 +106,7 @@ def test_the_prompts_have_the_snapshot_the_text_and_the_numbered_requirements():
     assert "- max_age: IF age greater_than 65 THEN decline" in first
     assert "[page 2]\nmedical report." in first
 
-    found = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
+    found, _ = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
     second = build_rules_prompt(found, sample_rulebook())
     assert f'1. (page 1) Summary of: {BMI_40}\n   Text: "{BMI_40}"' in second
     assert "- max_age: IF" in second

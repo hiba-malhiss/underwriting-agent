@@ -16,7 +16,7 @@ from app.core.errors import ConflictError
 from app.infrastructure.document_reader import DocumentReader, DocumentText
 from app.infrastructure.llm import LanguageModel
 from app.infrastructure.storage.blob import BlobStore
-from app.rules.extraction import Proposal, check_suggestions
+from app.rules.extraction import Proposal
 from app.rules.models import Rulebook
 from app.rules.parameter_checks import merge_parameters
 from app.rules.prompts import (
@@ -25,17 +25,14 @@ from app.rules.prompts import (
     build_requirements_prompt,
     build_rules_prompt,
 )
-from app.rules.repair import ask_with_repairs, problems_to_fix
+from app.rules.repair import ask_with_repairs
 from app.rules.repository import RulebookRepository, RulebookVersion
 from app.rules.requirements import (
     DraftRulebook,
     FoundRequirement,
     RequirementList,
     check_requirements,
-    describe,
-    missed_requirements,
-    requirement_problems,
-    rules_from_drafts,
+    check_rules,
 )
 from app.rules.validation import ensure_valid
 
@@ -58,58 +55,55 @@ class RulesService:
         self._repository = repository
 
     async def propose_from_guideline(self, document_name: str) -> Proposal:
-        data = await self._guideline_file.download(document_name)
-        text = await self._reader.read(data)
+        # 1. The document and the current rulebook
+        text = await self._load_document(document_name)
         current = await self._repository.get_current()
-        current_rulebook = current.rulebook if current else None
 
-        requirements, repairs_1 = await self._find_requirements(
-            text, document_name, current_rulebook
-        )
-        to_add = [r for r in requirements if r.action == "add_rule"]
-        proposal, repairs_2 = await self._write_rules(
-            to_add, text, document_name, current_rulebook, current.version if current else None
-        )
+        # 2. What the guidelines require (step 1)
+        requirements, repairs_1 = await self._extract_requirements(document_name, text, current)
+
+        # 3. The rules for those requirements (step 2)
+        proposal, repairs_2 = await self._generate_rules(requirements, document_name, text, current)
+
         return replace(proposal, repair_rounds=repairs_1 + repairs_2)
 
-    async def _find_requirements(
-        self, text: DocumentText, document_name: str, current: Rulebook | None
+    async def _load_document(self, document_name: str) -> DocumentText:
+        data = await self._guideline_file.download(document_name)
+        return await self._reader.read(data)
+
+    async def _extract_requirements(
+        self, document_name: str, text: DocumentText, current: RulebookVersion | None
     ) -> tuple[list[FoundRequirement], int]:
-        """Step 1: what the guidelines require, each quote checked."""
-
-        def check(answer: RequirementList):
-            found = check_requirements(answer, text, document_name)
-            return found, requirement_problems(found)
-
-        prompt = build_requirements_prompt(document_name, text, current)
+        """Every requirement in the text, each quote checked (and fixed by the model if needed)."""
+        prompt = build_requirements_prompt(document_name, text, _rulebook(current))
         return await ask_with_repairs(
-            self._model, REQUIREMENTS_PROMPT, prompt, RequirementList, check
+            self._model,
+            REQUIREMENTS_PROMPT,
+            prompt,
+            RequirementList,
+            check=lambda answer: check_requirements(answer, text, document_name),
         )
 
-    async def _write_rules(
+    async def _generate_rules(
         self,
         requirements: list[FoundRequirement],
-        text: DocumentText,
         document_name: str,
-        current: Rulebook | None,
-        based_on_version: int | None,
+        text: DocumentText,
+        current: RulebookVersion | None,
     ) -> tuple[Proposal, int]:
-        """Step 2: the parameters and rules for the requirements, checked, and every
-        requirement covered by a rule."""
-        if not requirements:  # nothing new in the document: no need to ask
-            empty = Rulebook(parameters=[], rules=[])
-            return check_suggestions(empty, current, text, document_name, based_on_version), 0
+        """The parameters and rules for the requirements that need one, checked, and every one of
+        those requirements covered by a rule."""
+        to_add = [r for r in requirements if r.action == "add_rule"]
+        version = current.version if current else None
 
         def check(draft: DraftRulebook):
-            suggested, wrong_numbers = rules_from_drafts(draft, requirements)
-            proposal = check_suggestions(suggested, current, text, document_name, based_on_version)
-            missed = missed_requirements(draft, requirements)
-            proposal = replace(proposal, missed=[describe(r) for r in missed])
-            problems = problems_to_fix(proposal) + wrong_numbers
-            problems += [f"{describe(r)}: no rule written for it" for r in missed]
-            return proposal, problems
+            return check_rules(draft, to_add, _rulebook(current), text, document_name, version)
 
-        prompt = build_rules_prompt(requirements, current)
+        if not to_add:  # nothing new in the document: no need to ask
+            proposal, _ = check(DraftRulebook(parameters=[], rules=[]))
+            return proposal, 0
+
+        prompt = build_rules_prompt(to_add, _rulebook(current))
         return await ask_with_repairs(self._model, RULES_PROMPT, prompt, DraftRulebook, check)
 
     async def get_current(self) -> RulebookVersion | None:
@@ -132,3 +126,7 @@ class RulesService:
         )
         ensure_valid(combined)
         return await self._repository.save_new_version(combined, note)
+
+
+def _rulebook(current: RulebookVersion | None) -> Rulebook | None:
+    return current.rulebook if current else None

@@ -13,13 +13,13 @@ rules for them; each rule says which requirement it encodes. Code then:
 Nothing is saved here. The rules then go through the usual checks (extraction.py).
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal
 
 from pydantic import Field
 
 from app.infrastructure.document_reader import DocumentText
-from app.rules.extraction import locate_quote
+from app.rules.extraction import Proposal, check_suggestions, locate_quote, problems_to_fix
 from app.rules.models import Parameter, Rule, Rulebook, RuleLogic, Source, Strict
 
 # add_rule: an exception (decline, review, a document, extra terms) no current rule covers yet
@@ -49,19 +49,19 @@ class FoundRequirement:
     problems: list[str] = field(default_factory=list)
 
 
-def check_requirements(answer: RequirementList, text: DocumentText, document_name: str):
-    """Number the requirements and check each quote is in the text."""
+def check_requirements(
+    answer: RequirementList, text: DocumentText, document_name: str
+) -> tuple[list[FoundRequirement], list[str]]:
+    """Number the requirements and check each quote is in the text. Returns them and their
+    problems."""
     found = []
     for number, requirement in enumerate(answer.requirements, start=1):
         source, problems = locate_quote(requirement.quote, text, document_name)
         found.append(
             FoundRequirement(number, requirement.summary, requirement.action, source, problems)
         )
-    return found
-
-
-def requirement_problems(requirements: list[FoundRequirement]) -> list[str]:
-    return [f"requirement {r.number}: {problem}" for r in requirements for problem in r.problems]
+    problems = [f"requirement {r.number}: {problem}" for r in found for problem in r.problems]
+    return found, problems
 
 
 # ---- Step 2: the rules for the add_rule requirements ----
@@ -74,6 +74,26 @@ class DraftRule(RuleLogic):
 class DraftRulebook(Strict):
     parameters: list[Parameter]  # first, like AUI: the rules below may only use known ones
     rules: list[DraftRule]
+
+
+def check_rules(
+    draft: DraftRulebook,
+    requirements: list[FoundRequirement],
+    current: Rulebook | None,
+    text: DocumentText,
+    document_name: str,
+    based_on_version: int | None,
+) -> tuple[Proposal, list[str]]:
+    """The drafts as a Proposal (with the usual checks, extraction.py), and every problem:
+    the proposal's, rules pointing to no requirement, and requirements no rule covers."""
+    suggested, wrong_numbers = rules_from_drafts(draft, requirements)
+    proposal = check_suggestions(suggested, current, text, document_name, based_on_version)
+    missed = missed_requirements(draft, requirements)
+    proposal = replace(proposal, missed=[describe(r) for r in missed])
+
+    problems = problems_to_fix(proposal) + wrong_numbers
+    problems += [f"{describe(r)}: no rule written for it" for r in missed]
+    return proposal, problems
 
 
 def rules_from_drafts(

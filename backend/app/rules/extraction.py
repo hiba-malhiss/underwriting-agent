@@ -5,7 +5,8 @@ Steps:
    rules are deduplicated by what they do, not their name.
 2. Verify each rule's quote against the document (parameters have no quote).
 3. Validate the combined rulebook; flag new parameters that no rule uses.
-4. Return suggestions and problems for human review.
+4. Return suggestions and problems for human review (and, through problems_to_fix, for the
+   model to fix).
 
 Nothing is saved here.
 """
@@ -21,7 +22,12 @@ from app.rules.models import (
     Rulebook,
     Source,
 )
-from app.rules.parameter_checks import check_parameters, merge_parameters, used_parameters
+from app.rules.parameter_checks import (
+    NEW_ALLOWED_VALUES,
+    check_parameters,
+    merge_parameters,
+    used_parameters,
+)
 from app.rules.validation import find_problems
 
 
@@ -268,3 +274,20 @@ def merge_errors(*groups: list[str]) -> list[str]:
     all_errors = [error for group in groups for error in group]
 
     return list(dict.fromkeys(all_errors))
+
+
+def problems_to_fix(proposal: Proposal) -> list[str]:
+    """Every problem in a proposal, for the model to fix: all but the notes meant only for the
+    reviewer (a list of allowed values that grows is fine, not a mistake)."""
+    problems = [
+        f"parameter {suggested.parameter.name}: {problem}"
+        for suggested in proposal.parameters
+        for problem in suggested.problems
+        if not problem.startswith(NEW_ALLOWED_VALUES)
+    ]
+    problems += [
+        f"rule {suggested.rule.name}: {problem}"
+        for suggested in proposal.rules
+        for problem in suggested.problems
+    ]
+    return problems

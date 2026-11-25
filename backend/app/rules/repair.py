@@ -10,8 +10,6 @@ from collections.abc import Callable
 from pydantic import BaseModel
 
 from app.infrastructure.llm import LanguageModel, Message
-from app.rules.extraction import Proposal
-from app.rules.parameter_checks import NEW_ALLOWED_VALUES
 from app.rules.prompts import build_repair_prompt
 
 # Repair rounds after the first answer, so at most 3 model calls per step. Each call takes
@@ -49,20 +47,3 @@ async def ask_with_repairs[Answer: BaseModel, Checked](
 
     checked, _, round_number = best
     return checked, round_number
-
-
-def problems_to_fix(proposal: Proposal) -> list[str]:
-    """Every problem in a proposal, except the notes meant only for the reviewer (a list of
-    allowed values that grows is fine, not a mistake)."""
-    problems = [
-        f"parameter {suggested.parameter.name}: {problem}"
-        for suggested in proposal.parameters
-        for problem in suggested.problems
-        if not problem.startswith(NEW_ALLOWED_VALUES)
-    ]
-    problems += [
-        f"rule {suggested.rule.name}: {problem}"
-        for suggested in proposal.rules
-        for problem in suggested.problems
-    ]
-    return problems
