@@ -50,3 +50,18 @@ def test_checkboxes_stay_readable_without_moving_offsets():
     assert len(readable) == len(content)
     assert readable.index("Yes") == content.index("Yes")
     assert DocumentText(readable, [PageSpan(1, 0, len(readable))]).locate("[x] Yes") == (1, 1)
+
+
+# Layout reads bullet points as ticked boxes, so "[x]" can sit inside a sentence: still matches
+def test_checkbox_marks_inside_a_sentence_do_not_break_a_quote():
+    text = "with proof [x]        of enrolment.\nNext point"
+    document = DocumentText(text, [PageSpan(1, 0, len(text))])
+    assert document.locate("with proof of enrolment.") == (1, 1)
+
+
+# Part of a sentence, ended with a "." by the LLM, still matches; changed words still don't
+def test_punctuation_at_the_edges_of_a_quote_does_not_matter():
+    text = "A spouse requires a marriage certificate and children require a birth certificate."
+    document = DocumentText(text, [PageSpan(1, 0, len(text))])
+    assert document.locate("A spouse requires a marriage certificate.") == (1, 1)
+    assert document.locate("A spouse needs a marriage certificate.") is None

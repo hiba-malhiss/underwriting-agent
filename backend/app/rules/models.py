@@ -62,11 +62,15 @@ class Source(Strict):
 
     document: str
     page: int | None = None
+    last_page: int | None = None  # set when the quote runs onto the next page
     quote: str = Field(min_length=1)
 
 
 class Parameter(Strict):
-    """A fact about an applicant that the rules use, e.g. age, BMI, smoker, conditions."""
+    """A fact about an applicant that the rules use, e.g. age, BMI, smoker, conditions.
+
+    No source quote: the same fact appears in many sentences, and every RULE that uses it has
+    its own quote saying why it matters."""
 
     name: str = Field(pattern=NAME_PATTERN)
     value_type: ValueType
@@ -74,7 +78,6 @@ class Parameter(Strict):
     # enum: the one value it can take; list: the values it can contain
     allowed_values: list[str] | None = None
     unit: str | None = None  # e.g. "years", "kg", "%"
-    source: Source
 
 
 class Condition(Strict):

@@ -9,6 +9,7 @@ dependencies = [
     "azure-search-documents>=11.5",
     "azure-storage-blob[aio]>=12.20.0",
     "fastapi[standard]>=0.115.0",
+    "openai>=1.99",
     "pydantic-settings>=2.6.0",
     "sqlalchemy[asyncio]>=2.0.30",
 ]

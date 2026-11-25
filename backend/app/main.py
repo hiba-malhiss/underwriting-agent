@@ -20,6 +20,7 @@ from app.infrastructure.database import (
     is_reachable,
 )
 from app.infrastructure.document_reader import DocumentReader
+from app.infrastructure.llm import LanguageModel
 
 
 # startup => yield => shutdown
@@ -34,6 +35,14 @@ async def lifespan(app: FastAPI):
     app.state.document_reader = (
         DocumentReader.connect(settings.document_intelligence_endpoint, credential)
         if settings.document_intelligence_endpoint
+        else None
+    )
+    # The language model, when configured (extracts rules and applicants' values)
+    app.state.language_model = (
+        LanguageModel.connect(
+            settings.azure_openai_endpoint, settings.azure_openai_deployment, credential
+        )
+        if settings.azure_openai_endpoint
         else None
     )
     # MySQL, when configured: tables are created if missing (v1: no migrations yet)
@@ -51,6 +60,8 @@ async def lifespan(app: FastAPI):
         await app.state.database.dispose()
     if app.state.document_reader is not None:
         await app.state.document_reader.close()
+    if app.state.language_model is not None:
+        await app.state.language_model.close()
     for store in app.state.document_stores.values():
         await store.close()
     for indexer in app.state.document_indexers.values():

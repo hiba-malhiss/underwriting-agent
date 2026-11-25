@@ -8,6 +8,8 @@ This module only stores, lists, downloads and deletes. It knows nothing about HT
 are accepted.
 """
 
+from dataclasses import dataclass
+from datetime import datetime
 from urllib.parse import quote, unquote
 
 from azure.core.credentials_async import AsyncTokenCredential
@@ -16,10 +18,19 @@ from azure.storage.blob import ContentSettings
 from azure.storage.blob.aio import BlobServiceClient
 
 from app.infrastructure.storage.exceptions import to_storage_error
-from app.infrastructure.storage.file_store import FileStore, StoredDocument
 
 
-class BlobStore(FileStore):
+# frozen: a stored file's details can't be changed after it's created
+@dataclass(frozen=True)
+class StoredDocument:
+    name: str  # where it is stored, e.g. "<applicant_id>/<random>-form.pdf"
+    filename: str  # the name the user uploaded
+    content_type: str
+    size: int
+    uploaded_at: datetime
+
+
+class BlobStore:
     """One shared client for the app's lifetime (opened at startup, closed at shutdown)."""
 
     def __init__(self, service: BlobServiceClient, container: str):

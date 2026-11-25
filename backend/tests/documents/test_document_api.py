@@ -12,12 +12,12 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app.documents.dependencies import get_indexers, get_stores  # noqa: E402
 from app.documents.types import DocumentType  # noqa: E402
+from app.infrastructure.storage.blob import StoredDocument  # noqa: E402
 from app.infrastructure.storage.exceptions import (  # noqa: E402
     ContainerNotFoundError,
     StorageError,
     StoredFileNotFoundError,
 )
-from app.infrastructure.storage.file_store import StoredDocument  # noqa: E402
 from app.main import app  # noqa: E402
 
 APPLICANT_ID = "11111111-2222-3333-4444-555555555555"
@@ -138,7 +138,7 @@ def test_delete_removes_the_document(stores, client):
     assert stores[DocumentType.REQUIREMENT].deleted == []
 
 
-class MissingFileStore(FakeStore):
+class MissingBlobStore(FakeStore):
     async def delete(self, name):
         raise StoredFileNotFoundError("File not found. It may have been deleted already.")
 
@@ -147,7 +147,7 @@ class MissingFileStore(FakeStore):
 def test_delete_of_a_missing_file_is_404(client):
     app.dependency_overrides = {
         get_indexers: lambda: {},
-        get_stores: lambda: {document_type: MissingFileStore() for document_type in DocumentType},
+        get_stores: lambda: {document_type: MissingBlobStore() for document_type in DocumentType},
     }
     response = client.delete("/documents", params={"type": "requirement", "name": "gone.pdf"})
     app.dependency_overrides = {}

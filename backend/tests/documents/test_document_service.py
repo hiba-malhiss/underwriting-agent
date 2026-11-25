@@ -10,7 +10,7 @@ from app.documents.service import DocumentService
 from app.documents.types import DocumentType
 from app.documents.validation import DocumentRejectedError
 from app.infrastructure.search.exceptions import SearchError
-from app.infrastructure.storage.file_store import StoredDocument
+from app.infrastructure.storage.blob import StoredDocument
 
 APPLICANT_ID = UUID("11111111-2222-3333-4444-555555555555")
 

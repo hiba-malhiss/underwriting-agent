@@ -74,14 +74,16 @@ def _evaluate_rule(rule: Rule, values: dict[str, Any]) -> RuleResult:
 
 
 def _group(group: ConditionGroup, values: dict[str, Any], notes: list[str], missing: list[str]):
-    items = group.all_of if group.all_of is not None else (group.any_of or [])
+    # An empty list counts as "not there" (validation allows only one non-empty list)
+    is_all_of = bool(group.all_of)
+    items = group.all_of if is_all_of else (group.any_of or [])
     results = [
         _group(item, values, notes, missing)
         if isinstance(item, ConditionGroup)
         else _condition(item, values, notes, missing)
         for item in items
     ]
-    if group.all_of is not None:
+    if is_all_of:
         if False in results:
             return False
         return UNKNOWN if UNKNOWN in results else True

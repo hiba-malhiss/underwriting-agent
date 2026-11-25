@@ -18,26 +18,22 @@ def sample_rulebook() -> Rulebook:
                     "value_type": "number",
                     "unit": "years",
                     "description": "Age",
-                    "source": source("Applicants over 65 years of age are not eligible"),
                 },
                 {
                     "name": "bmi",
                     "value_type": "number",
                     "description": "Body mass index",
-                    "source": source("A BMI above 35 requires review", 2),
                 },
                 {
                     "name": "smoker",
                     "value_type": "boolean",
                     "description": "Smokes tobacco",
-                    "source": source("Smokers are referred for review", 2),
                 },
                 {
                     "name": "conditions",
                     "value_type": "list",
                     "description": "Known conditions",
                     "allowed_values": ["diabetes_type_2", "heart_disease", "asthma"],
-                    "source": source("Applicants with type 2 diabetes and a BMI above 30", 2),
                 },
             ],
             "rules": [

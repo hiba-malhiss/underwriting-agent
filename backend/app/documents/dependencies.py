@@ -17,10 +17,9 @@ from app.documents.service import DocumentService
 from app.documents.types import DocumentType
 from app.infrastructure.search.indexer import IndexerRunner
 from app.infrastructure.storage.blob import BlobStore
-from app.infrastructure.storage.file_store import FileStore
 
 
-def create_document_stores(credential: AsyncTokenCredential) -> dict[DocumentType, FileStore]:
+def create_document_stores(credential: AsyncTokenCredential) -> dict[DocumentType, BlobStore]:
     containers = {
         DocumentType.APPLICANT: settings.applicant_container,
         DocumentType.REQUIREMENT: settings.requirements_container,
@@ -48,7 +47,7 @@ def create_document_indexers(
     }
 
 
-def get_stores(request: Request) -> dict[DocumentType, FileStore]:
+def get_stores(request: Request) -> dict[DocumentType, BlobStore]:
     # Created once at startup (see main.py) and shared by every request
     return request.app.state.document_stores
 
@@ -59,7 +58,7 @@ def get_indexers(request: Request) -> dict[DocumentType, IndexerRunner]:
 
 
 def get_document_service(
-    stores: Annotated[dict[DocumentType, FileStore], Depends(get_stores)],
+    stores: Annotated[dict[DocumentType, BlobStore], Depends(get_stores)],
     indexers: Annotated[dict[DocumentType, IndexerRunner], Depends(get_indexers)],
 ) -> DocumentService:
     return DocumentService(stores, settings.max_upload_mb, indexers)

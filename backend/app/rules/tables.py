@@ -2,7 +2,7 @@
 
 Versions are never edited: saving creates a new row with the next version, so old versions
 stay as they were and every evaluation can say which version it used. The parts whose
-shape varies (conditions, allowed values, sources) are JSON columns; the code reads them back
+shape varies (conditions, allowed values, rule sources) are JSON columns; the code reads them back
 through models.py, which checks their shape.
 """
 
@@ -45,7 +45,6 @@ class ParameterRow(Base):
     description: Mapped[str] = mapped_column(Text)
     allowed_values: Mapped[list[str] | None] = mapped_column(JSON)
     unit: Mapped[str | None] = mapped_column(String(50))
-    source: Mapped[dict] = mapped_column(JSON)
 
 
 class RuleRow(Base):

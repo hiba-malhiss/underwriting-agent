@@ -3,6 +3,8 @@
 import pytest
 
 from app.rules.evaluator import evaluate
+from app.rules.models import Condition, ConditionGroup
+from app.rules.validation import find_problems
 from tests.rules.sample import sample_rulebook
 
 
@@ -59,3 +61,18 @@ def test_a_value_of_the_wrong_type_is_missing_data():
     r = results({"age": "seventy"})
     assert r["max_age"].status == "missing_data"
     assert r["max_age"].missing_parameters == ["age"]
+
+
+# In strict JSON the LLM sends both lists, one empty: the empty one is ignored, not run as AND
+def test_an_empty_list_next_to_the_real_one_is_ignored():
+    rulebook = sample_rulebook()
+    rule = rulebook.rules[0].model_copy(
+        update={
+            "conditions": ConditionGroup(
+                all_of=[], any_of=[Condition(parameter="age", operator="greater_than", value=65)]
+            )
+        }
+    )
+    assert find_problems(rulebook.model_copy(update={"rules": [rule]})) == []
+    result = evaluate(rulebook.model_copy(update={"rules": [rule]}), {"age": 40})[0]
+    assert result.status == "passed"

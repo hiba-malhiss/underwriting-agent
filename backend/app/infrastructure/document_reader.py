@@ -21,6 +21,7 @@ from app.core.errors import BadGatewayError
 # How Layout writes the checkboxes it sees, and how we show them: a ticked box matters (e.g.
 # "Do you smoke? [x] Yes [ ] No"), so it's kept in a form the LLM reads easily
 _CHECKBOX_MARKS = {":selected:": "[x]", ":unselected:": "[ ]"}
+_CHECKBOX_SHOWN = set(_CHECKBOX_MARKS.values())
 
 # Typographic characters normalised for quote matching: the LLM often writes plain ASCII
 _SAME_CHARACTER = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"', "–": "-", "—": "-"})
@@ -58,10 +59,13 @@ class DocumentText:
     def locate(self, quote: str) -> tuple[int, int] | None:
         """The first and last page of `quote` in the text, or None if it isn't there.
 
-        Line breaks, extra spaces and curly quotes don't count, so a quote that runs across a
-        page break (and therefore a line break) still matches."""
+        Line breaks, extra spaces, curly quotes, checkbox marks and punctuation at the quote's
+        edges don't count, so a quote that runs across a page break (and therefore a line break)
+        still matches, but its words must be exactly in the text."""
         text, offsets = _squeeze(self.content)
         target, _ = _squeeze(quote)
+        # Punctuation at the edges doesn't count: the LLM may end a part of a sentence with "."
+        target = target.strip(" .,;:")
         if not target:
             return None
         found = text.find(target)
@@ -76,12 +80,15 @@ class DocumentText:
 
 def _squeeze(text: str) -> tuple[str, list[int]]:
     """`text` with every run of whitespace turned into one space (and curly quotes / dashes made
-    plain), plus, for each kept character, its offset in the original text."""
+    plain), plus, for each kept character, its offset in the original text.
+
+    Checkbox marks ("[x]", "[ ]") count as spaces: Layout also reads bullet points as ticked
+    boxes, so "[x]" can sit in the middle of a sentence the LLM quotes without it."""
     kept: list[str] = []
     offsets: list[int] = []
-    for match in re.finditer(r"\s+|\S", text.translate(_SAME_CHARACTER)):
+    for match in re.finditer(r"\[x\]|\[ \]|\s+|\S", text.translate(_SAME_CHARACTER)):
         piece = match.group(0)
-        if piece.isspace():
+        if piece.isspace() or piece in _CHECKBOX_SHOWN:
             if kept and kept[-1] != " ":
                 kept.append(" ")
                 offsets.append(match.start())
@@ -150,5 +157,9 @@ def _readable_checkboxes(content: str) -> str:
     """ ":selected:" → "[x]" and ":unselected:" → "[ ]", padded with spaces to the same length,
     so every page's offsets stay correct."""
     for mark, shown in _CHECKBOX_MARKS.items():
+        # ljust() بتضيف مسافات على يمين النص حتى يصير بنفس الطول الأصلي.
+        # مثلاً:
+        #   ":selected:"  # 10 characters
+        #   "[x]"         # 3 characters → "[x]" + 7 spaces = 10 characters
         content = content.replace(mark, shown.ljust(len(mark)))
     return content

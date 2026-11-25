@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from app.rules.models import Rulebook
 from app.rules.validation import RulebookInvalidError, ensure_valid, find_problems
-from tests.rules.sample import sample_rulebook, source
+from tests.rules.sample import sample_rulebook
 
 
 def with_rule(**changes) -> Rulebook:
@@ -52,6 +52,7 @@ def test_the_sample_rulebook_is_valid():
             "needs a list of values",
         ),
         ({"all_of": [], "any_of": None}, "can't be empty"),
+        ({"all_of": [], "any_of": []}, "can't be empty"),
         (
             {
                 "all_of": [{"parameter": "age", "operator": "greater_than", "value": 65}],
@@ -79,7 +80,6 @@ def test_parameters_are_checked_too():
             "name": "region",
             "value_type": "enum",
             "description": "Region",
-            "source": source("Region"),
         }
     )
     data["parameters"].append(data["parameters"][0])  # age twice

@@ -19,7 +19,7 @@ from app.documents.types import DOCUMENT_CONFIGS, DocumentType
 from app.documents.validation import DocumentRejectedError, accepted_content_type
 from app.infrastructure.search.exceptions import SearchError
 from app.infrastructure.search.indexer import IndexerRunner
-from app.infrastructure.storage.file_store import FileStore, StoredDocument
+from app.infrastructure.storage.blob import BlobStore, StoredDocument
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class DocumentService:
     def __init__(
         self,
-        stores: dict[DocumentType, FileStore],
+        stores: dict[DocumentType, BlobStore],
         max_upload_mb: int,
         indexers: dict[DocumentType, IndexerRunner] | None = None,
     ):

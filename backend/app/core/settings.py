@@ -37,6 +37,15 @@ class Settings(BaseSettings):
         default=None, validation_alias="DOCUMENT_INTELLIGENCE_ENDPOINT"
     )
 
+    # Azure OpenAI in Foundry: the resource's endpoint and the model deployment's name.
+    # Optional: without it, nothing can be extracted from documents.
+    azure_openai_endpoint: str | None = Field(
+        default=None, validation_alias="AZURE_OPENAI_ENDPOINT"
+    )
+    azure_openai_deployment: str = Field(
+        default="gpt-4.1-mini", validation_alias="AZURE_OPENAI_DEPLOYMENT"
+    )
+
     # MySQL (Azure Database for MySQL – Flexible Server). Optional: without it, the rulebook
     # can't be saved. No password: the app signs in with an Entra token (see database.py)
     mysql_host: str | None = Field(default=None, validation_alias="MYSQL_HOST")

@@ -84,7 +84,6 @@ def _to_row(rulebook: Rulebook, version: int, note: str | None) -> RulebookVersi
                 description=p.description,
                 allowed_values=p.allowed_values,
                 unit=p.unit,
-                source=p.source.model_dump(mode="json"),
             )
             for p in rulebook.parameters
         ],
@@ -117,7 +116,6 @@ def _to_version(row: RulebookVersionRow) -> RulebookVersion:
                     "description": p.description,
                     "allowed_values": p.allowed_values,
                     "unit": p.unit,
-                    "source": p.source,
                 }
                 for p in row.parameters
             ],
