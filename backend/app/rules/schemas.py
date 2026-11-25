@@ -32,6 +32,7 @@ class ProposalResponse(BaseModel):
     rules: list[SuggestedRuleResponse]
     skipped: list[str]
     repair_rounds: int
+    missed: list[str]  # requirements in the document that no rule was written for
 
     @classmethod
     def from_proposal(cls, proposal: Proposal) -> Self:
@@ -45,6 +46,7 @@ class ProposalResponse(BaseModel):
             rules=[SuggestedRuleResponse(rule=s.rule, problems=s.problems) for s in proposal.rules],
             skipped=proposal.skipped,
             repair_rounds=proposal.repair_rounds,
+            missed=proposal.missed,
         )
 
 

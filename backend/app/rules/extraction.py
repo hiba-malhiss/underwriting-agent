@@ -45,6 +45,7 @@ class Proposal:
     rules: list[SuggestedRule]
     skipped: list[str]
     repair_rounds: int = 0  # how many times the model was asked to fix its answer
+    missed: list[str] = field(default_factory=list)  # requirements no rule was written for
 
 
 def check_suggestions(
@@ -210,30 +211,24 @@ def locate_source(
     document_name: str,
 ):
     """Verify a rule's quote and find its actual document page."""
+    source, errors = locate_quote(item.source.quote, text, document_name)
+    return item.model_copy(update={"source": source}), errors
 
-    pages = text.locate(item.source.quote)
 
+def locate_quote(quote: str, text: DocumentText, document_name: str) -> tuple[Source, list[str]]:
+    """The quote's source with its real page(s), or a problem if it isn't in the text."""
+    pages = text.locate(quote)
     if pages is None:
-        source = Source(
-            document=document_name,
-            quote=item.source.quote,
-        )
-        errors = ["quote not found in the document (made up or paraphrased?)"]
-
-    else:
-        first, last = pages
-
-        source = Source(
-            document=document_name,
-            page=first,
-            last_page=last if last != first else None,
-            quote=item.source.quote,
-        )
-        errors = []
-
-    updated_item = item.model_copy(update={"source": source})
-
-    return updated_item, errors
+        return Source(document=document_name, quote=quote), [
+            "quote not found in the document (made up or paraphrased?)"
+        ]
+    first, last = pages
+    return Source(
+        document=document_name,
+        page=first,
+        last_page=last if last != first else None,
+        quote=quote,
+    ), []
 
 
 def flag_unused_parameters(

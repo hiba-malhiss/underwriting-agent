@@ -38,7 +38,8 @@ async def get_current(service: Service) -> RulebookVersionResponse | None:
 
 @router.post("/proposals", response_model=ProposalResponse)
 async def propose(body: ProposeRequest, service: Service) -> ProposalResponse:
-    """Can take 30–60 seconds: the document is read, then the LLM suggests rules."""
+    """Can take 1–2 minutes: the document is read, then the LLM lists its requirements and
+    writes rules for them (each step fixed by the model if the checks find problems)."""
     proposal = await service.propose_from_guideline(body.document)
     return ProposalResponse.from_proposal(proposal)
 

@@ -113,12 +113,18 @@ class ConditionGroup(Strict):
     items: list[Condition | ConditionGroup]
 
 
-class Rule(Strict):
+class RuleLogic(Strict):
+    """What a rule does, without its source. The LLM writes this in the rules step; code adds the
+    source from the requirement the rule encodes (requirements.py)."""
+
     name: str = Field(pattern=NAME_PATTERN)
     description: str  # the rule in plain words, for the reviewer
     rule_type: RuleType
     conditions: ConditionGroup | None = None  # required for automatic rules, none for judgment
     outcome: Outcome
+
+
+class Rule(RuleLogic):
     source: Source
 
 

@@ -62,6 +62,7 @@ export interface Proposal {
   rules: { rule: Rule; problems: string[] }[];
   skipped: string[];
   repair_rounds: number; // how many times the model was asked to fix its answer
+  missed: string[]; // requirements in the document that no rule was written for
 }
 
 export interface SaveVersionRequest {

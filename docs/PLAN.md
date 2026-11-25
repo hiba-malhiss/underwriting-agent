@@ -82,13 +82,17 @@ Applicant docs ─► read (OCR) ─► LLM fills parameter values (with sources
     current rulebook: a short list written by code (each parameter with its kind, type and
     values; each rule as one line "IF … THEN …"), not the full JSON. Only **additions** come back
     - **Step 1, what the guidelines require:** every statement that decides something, with its
-      exact quote, marked "needs a rule" or "no rule" (it only says something is fine), plus the
-      parameters those statements need (reusing the snapshot's names: `age`, not `applicant_age`)
-    - **Step 2, the rules:** one rule per statement that needs one, using only known parameters
+      exact quote and a one-sentence summary, marked `add_rule`, `already_covered` (a current
+      rule does it) or `no_rule` (it only says something is fine)
+    - **Step 2, the rules:** the numbered `add_rule` requirements → the parameters (written
+      first, reusing the snapshot's names: `age`, not `applicant_age`) and the rules; each rule
+      says which requirement it encodes, and code gives it that requirement's checked quote as
+      its source (so step 2 can't invent a quote). Parameters sit in step 2, not step 1, so a
+      rule that needs a new parameter can still add it during a repair
     - **Code checks after each step:** each quote is really in the text (ignoring line breaks and
       spaces, so quotes across pages still match) and its page; the rulebook checks; a duplicate
-      of a current rule is skipped; and **coverage: every statement that needs a rule has one**
-      (so a missed rule shows up as a problem)
+      of a current rule is skipped; and **coverage: every `add_rule` requirement has a rule** (so
+      a missed rule shows up as a problem, and the page lists any still missed)
     - **Repair loop:** if a step has problems, they go back to the LLM with its own answer, to
       fix (at most 2 times); the answer with the fewest problems is kept. A plain loop, no
       LangGraph (the flow is a straight line)

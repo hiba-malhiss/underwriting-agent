@@ -1,15 +1,10 @@
 """Checks on the LLM's suggestions: what's skipped, how quotes and pages are set, and which item
-each problem belongs to. The LLM is replaced by a fixed answer."""
-
-import asyncio
-from datetime import UTC, datetime
+each problem belongs to. The LLM is replaced by a fixed answer (the whole flow is in
+test_requirements.py)."""
 
 from app.infrastructure.document_reader import DocumentText, PageSpan
 from app.rules.extraction import check_suggestions
 from app.rules.models import Parameter, Rulebook
-from app.rules.prompts import build_user_prompt
-from app.rules.repository import RulebookVersion
-from app.rules.service import RulesService
 from tests.rules.sample import sample_rulebook
 
 GUIDE = "guidelines.pdf"
@@ -206,53 +201,3 @@ def test_rulebook_problems_are_attached_to_their_item():
     }
     rule = check(suggestion([BMI], [wrong])).rules[0]
     assert rule.problems == ["unknown parameter 'weight'"]
-
-
-def test_the_prompt_has_the_file_name_the_current_rulebook_and_page_markers():
-    prompt = build_user_prompt(GUIDE, TEXT, sample_rulebook())
-    assert "File name: guidelines.pdf" in prompt
-    assert "- max_age: IF age greater_than 65 THEN decline" in prompt
-    assert "[page 2]\nmedical report." in prompt
-
-
-class FakeStore:
-    async def download(self, name):
-        assert name == GUIDE
-        return b"%PDF"
-
-
-class FakeReader:
-    async def read(self, data):
-        return TEXT
-
-
-class FakeModel:
-    def __init__(self, answer: Rulebook):
-        self.answer = answer
-        self.prompts: list[str] = []
-
-    async def structured(self, system, messages, output):
-        self.prompts.append(messages[-1].content)
-        return self.answer
-
-
-class FakeRepository:
-    def __init__(self, current: Rulebook | None):
-        self.current = current
-
-    async def get_current(self):
-        if self.current is None:
-            return None
-        return RulebookVersion(3, datetime.now(UTC), None, self.current)
-
-
-# The whole flow: download → read → current version → model → checks
-def test_service_proposes_additions_to_the_current_version():
-    model = FakeModel(suggestion([BMI], [BMI_RULE]))
-    service = RulesService(FakeStore(), FakeReader(), model, FakeRepository(sample_rulebook()))
-
-    proposal = asyncio.run(service.propose_from_guideline(GUIDE))
-
-    assert proposal.based_on_version == 3
-    assert [r.rule.name for r in proposal.rules] == ["high_bmi_report"]
-    assert "- max_age: IF" in model.prompts[0]  # the model saw the current rules
