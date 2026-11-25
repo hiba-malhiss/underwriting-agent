@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { FileTextIcon, ImageIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import type { StoredDocument } from "@/api/types";
@@ -19,6 +20,8 @@ interface Props {
   error: string | null;
   deleting: string | null; // the stored name being deleted, if any
   onDelete: (name: string) => Promise<unknown>;
+  // Extra buttons per row (e.g. "Suggest rules" for guidelines), shown before delete
+  renderActions?: (document: StoredDocument) => ReactNode;
 }
 
 function formatSize(bytes: number): string {
@@ -33,7 +36,14 @@ function typeLabel(filename: string): string {
   return dot === -1 ? "FILE" : filename.slice(dot + 1).toUpperCase();
 }
 
-export function DocumentList({ documents, loading, error, deleting, onDelete }: Props) {
+export function DocumentList({
+  documents,
+  loading,
+  error,
+  deleting,
+  onDelete,
+  renderActions,
+}: Props) {
   const handleDelete = async (document: StoredDocument) => {
     if (!window.confirm(`Delete ${document.filename}? This can't be undone from the app.`)) return;
     try {
@@ -64,7 +74,7 @@ export function DocumentList({ documents, loading, error, deleting, onDelete }: 
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Size</TableHead>
                 <TableHead>Uploaded</TableHead>
-                <TableHead className="w-10">
+                <TableHead className="text-right">
                   <span className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
@@ -85,7 +95,8 @@ export function DocumentList({ documents, loading, error, deleting, onDelete }: 
                   </TableCell>
                   <TableCell className="text-right">{formatSize(document.size)}</TableCell>
                   <TableCell>{new Date(document.uploaded_at).toLocaleString()}</TableCell>
-                  <TableCell>
+                  <TableCell className="flex items-center justify-end gap-1">
+                    {renderActions?.(document)}
                     <Button
                       variant="ghost"
                       size="icon-sm"

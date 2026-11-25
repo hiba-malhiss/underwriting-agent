@@ -16,6 +16,7 @@ export default defineConfig({
     // Only API paths: they must not match a page path, or a refresh there would hit the backend
     proxy: {
       "/documents": BACKEND,
+      "/rules": BACKEND,
       "/health": BACKEND,
     },
   },
