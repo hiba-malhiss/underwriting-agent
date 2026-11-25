@@ -81,7 +81,9 @@ class RulesService:
             REQUIREMENTS_PROMPT,
             prompt,
             RequirementList,
-            check=lambda answer: check_requirements(answer, text, document_name),
+            check=lambda answer: check_requirements(
+                answer, text, document_name, _rulebook(current)
+            ),
         )
 
     async def _generate_rules(
@@ -93,7 +95,7 @@ class RulesService:
     ) -> tuple[Proposal, int]:
         """The parameters and rules for the requirements that need one, checked, and every one of
         those requirements covered by a rule."""
-        to_add = [r for r in requirements if r.action == "add_rule"]
+        to_add = [r for r in requirements if r.needs_rule]
         version = current.version if current else None
 
         def check(draft: DraftRulebook):

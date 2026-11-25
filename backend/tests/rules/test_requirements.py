@@ -13,6 +13,7 @@ from app.rules.requirements import (
     check_requirements,
     missed_requirements,
     rules_from_drafts,
+    wrong_outcomes,
 )
 from app.rules.service import RulesService
 from tests.rules.sample import sample_rulebook
@@ -23,21 +24,27 @@ BMI_40 = "A BMI above 40 requires a medical report."  # runs from page 1 onto pa
 HEART = "Heart conditions are at the underwriter's discretion."
 
 
-def requirements(*items: tuple[str, str]) -> RequirementList:
-    """(quote, action) pairs → the step 1 answer."""
+def requirements(*items: tuple) -> RequirementList:
+    """(quote, stated outcome[, covered_by]) → the step 1 answer."""
     return RequirementList.model_validate(
         {
             "requirements": [
-                {"quote": quote, "summary": f"Summary of: {quote}", "action": action}
-                for quote, action in items
+                {
+                    "quote": item[0],
+                    "summary": f"Summary of: {item[0]}",
+                    "outcome": item[1],
+                    "covered_by": item[2] if len(item) > 2 else None,
+                }
+                for item in items
             ]
         }
     )
 
 
-def draft(*rules: tuple[str, int], parameters=(BMI,)) -> DraftRulebook:
-    """(name, requirement number) pairs → the step 2 answer. Each rule tests BMI greater than
-    39 + its requirement's number, so rules for different requirements aren't duplicates."""
+def draft(*rules: tuple, parameters=(BMI,)) -> DraftRulebook:
+    """(name, requirement number[, outcome]) → the step 2 answer (outcome require_document by
+    default). Each rule tests BMI greater than 39 + its requirement's number, so rules for
+    different requirements aren't duplicates."""
     return DraftRulebook.model_validate(
         {
             "parameters": list(parameters),
@@ -53,9 +60,10 @@ def draft(*rules: tuple[str, int], parameters=(BMI,)) -> DraftRulebook:
                             {"parameter": "bmi", "operator": "greater_than", "value": 39 + number}
                         ],
                     },
-                    "outcome": "require_document",
+                    "outcome": rule[2] if len(rule) > 2 else "require_document",
                 }
-                for name, number in rules
+                for rule in rules
+                for name, number in [rule[:2]]
             ],
         }
     )
@@ -66,7 +74,10 @@ def draft(*rules: tuple[str, int], parameters=(BMI,)) -> DraftRulebook:
 
 def test_requirements_are_numbered_and_their_quotes_checked():
     found, problems = check_requirements(
-        requirements((BMI_40, "add_rule"), ("Made up sentence.", "add_rule")), TEXT, GUIDE
+        requirements((BMI_40, "require_document"), ("Made up sentence.", "require_document")),
+        TEXT,
+        GUIDE,
+        None,
     )
     assert [r.number for r in found] == [1, 2]
     assert (found[0].source.page, found[0].source.last_page, found[0].problems) == (1, 2, [])
@@ -74,11 +85,33 @@ def test_requirements_are_numbered_and_their_quotes_checked():
     assert problems == ["requirement 2: quote not found in the document (made up or paraphrased?)"]
 
 
+def test_code_decides_which_requirements_need_a_rule():
+    found, problems = check_requirements(
+        requirements(
+            (BMI_40, "require_document"),
+            (HEART, "accept"),  # fine as it is: no rule
+            (OVER_65, "decline", "max_age"),  # a current rule already does it
+        ),
+        TEXT,
+        GUIDE,
+        sample_rulebook(),
+    )
+    assert problems == []
+    assert [r.needs_rule for r in found] == [True, False, False]
+
+
+def test_covered_by_must_name_a_current_rule():
+    found, problems = check_requirements(
+        requirements((OVER_65, "decline", "made_up_rule")), TEXT, GUIDE, sample_rulebook()
+    )
+    assert problems == ["requirement 1: covered_by: there is no current rule 'made_up_rule'"]
+
+
 # ---- Step 2 ----
 
 
 def test_a_rule_gets_its_requirements_quote_and_page():
-    found, _ = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
+    found, _ = check_requirements(requirements((BMI_40, "require_document")), TEXT, GUIDE, None)
     rulebook, problems = rules_from_drafts(draft(("high_bmi_report", 1)), found)
     assert problems == []
     assert rulebook.rules[0].source.quote == BMI_40
@@ -86,15 +119,28 @@ def test_a_rule_gets_its_requirements_quote_and_page():
 
 
 def test_a_rule_pointing_to_no_requirement_is_left_out_and_reported():
-    found, _ = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
+    found, _ = check_requirements(requirements((BMI_40, "require_document")), TEXT, GUIDE, None)
     rulebook, problems = rules_from_drafts(draft(("high_bmi_report", 7)), found)
     assert rulebook.rules == []
     assert problems == ["rule high_bmi_report: there is no requirement 7"]
 
 
+def test_a_rule_must_have_its_requirements_outcome():
+    found, _ = check_requirements(requirements((BMI_40, "accept_with_terms")), TEXT, GUIDE, None)
+    # Accept with terms is referred (no outcome for terms yet), so require_document is wrong
+    assert wrong_outcomes(draft(("high_bmi_report", 1)), found) == [
+        "rule high_bmi_report: its outcome is require_document, but requirement 1 says "
+        "accept_with_terms (so the outcome is refer)"
+    ]
+    assert wrong_outcomes(draft(("high_bmi_report", 1, "refer")), found) == []
+
+
 def test_coverage_finds_requirements_with_no_rule():
     found, _ = check_requirements(
-        requirements((BMI_40, "add_rule"), (OVER_65, "add_rule"), (HEART, "no_rule")), TEXT, GUIDE
+        requirements((BMI_40, "require_document"), (OVER_65, "decline"), (HEART, "accept")),
+        TEXT,
+        GUIDE,
+        None,
     )
     missed = missed_requirements(draft(("high_bmi_report", 1)), found)
     assert [r.number for r in missed] == [2]  # 3 needs no rule
@@ -106,9 +152,12 @@ def test_the_prompts_have_the_snapshot_the_text_and_the_numbered_requirements():
     assert "- max_age: IF age greater_than 65 THEN decline" in first
     assert "[page 2]\nmedical report." in first
 
-    found, _ = check_requirements(requirements((BMI_40, "add_rule")), TEXT, GUIDE)
+    found, _ = check_requirements(requirements((BMI_40, "require_document")), TEXT, GUIDE, None)
     second = build_rules_prompt(found, sample_rulebook())
-    assert f'1. (page 1) Summary of: {BMI_40}\n   Text: "{BMI_40}"' in second
+    assert (
+        f'1. (page 1, outcome: require_document) Summary of: {BMI_40}\n   Text: "{BMI_40}"'
+        in second
+    )
     assert "- max_age: IF" in second
 
 
@@ -153,7 +202,7 @@ def propose(model: StepModel, current: Rulebook | None = None):
 
 def test_both_steps_give_a_proposal():
     model = StepModel(
-        [requirements((BMI_40, "add_rule"), (HEART, "no_rule"))],
+        [requirements((BMI_40, "require_document"), (HEART, "accept"))],
         [draft(("high_bmi_report", 1))],
     )
     proposal = propose(model, sample_rulebook())
@@ -163,14 +212,14 @@ def test_both_steps_give_a_proposal():
     assert proposal.rules[0].problems == []
     assert (proposal.missed, proposal.repair_rounds) == ([], 0)
     # Step 2 only got the requirement that needs a rule
-    assert "1. (page 1)" in model.calls[DraftRulebook][0][0].content
+    assert "1. (page 1, outcome: require_document)" in model.calls[DraftRulebook][0][0].content
     assert HEART not in model.calls[DraftRulebook][0][0].content
 
 
 def test_a_missed_requirement_goes_back_to_the_model():
     model = StepModel(
-        [requirements((BMI_40, "add_rule"), (OVER_65, "add_rule"))],
-        [draft(("high_bmi_report", 1)), draft(("high_bmi_report", 1), ("too_old", 2))],
+        [requirements((BMI_40, "require_document"), (OVER_65, "decline"))],
+        [draft(("high_bmi_report", 1)), draft(("high_bmi_report", 1), ("too_old", 2, "decline"))],
     )
     proposal = propose(model)
 
@@ -182,7 +231,7 @@ def test_a_missed_requirement_goes_back_to_the_model():
 
 def test_a_requirement_still_missed_after_the_repairs_is_shown_to_the_reviewer():
     model = StepModel(
-        [requirements((BMI_40, "add_rule"), (OVER_65, "add_rule"))],
+        [requirements((BMI_40, "require_document"), (OVER_65, "decline"))],
         [draft(("high_bmi_report", 1))],
     )
     proposal = propose(model)
@@ -190,7 +239,7 @@ def test_a_requirement_still_missed_after_the_repairs_is_shown_to_the_reviewer()
 
 
 def test_no_new_requirements_means_no_second_call():
-    model = StepModel([requirements((OVER_65, "already_covered"))], [])
+    model = StepModel([requirements((OVER_65, "decline", "max_age"))], [])
     proposal = propose(model, sample_rulebook())
     assert model.calls[DraftRulebook] == []
     assert proposal.rules == []

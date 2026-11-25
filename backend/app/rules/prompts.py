@@ -4,7 +4,8 @@ Kept apart from the code that checks the answers (requirements.py, extraction.py
 wording can be read and changed in one place.
 
 ملخّص الـ prompt:
-- خطوتين: أولاً REQUIREMENTS_PROMPT بيطلع كل متطلب من المستند مع اقتباس حرفي،
+- خطوتين: أولاً REQUIREMENTS_PROMPT بيطلع كل متطلب من المستند مع اقتباس حرفي والنتيجة
+  المكتوبة بالنص (accept, refer, decline…)، والكود بيقرر إذا بدّه rule،
   وبعدين RULES_PROMPT بيكتب الـ parameters والـ rules لكل متطلب.
 - كل Rule بتقول أي متطلب بتغطي، والكود بياخد الاقتباس من المتطلب.
 - أسماء الـ Parameters تكون lower_snake_case.
@@ -38,14 +39,16 @@ require of an applicant. Rules are written later, from your list.
 You get the guidelines' text (with [page N] markers) and {_SNAPSHOT_FORMAT}.
 
 List EVERY statement that decides something about an applicant: who is eligible or not, which
-documents they must provide, which medical findings lead to a decline, a review by an
-underwriter, or special terms (a waiting period, an exclusion, a loading). Go through the text
-section by section, and every row of a table that decides something. Keep a condition and its
-exceptions together ("children up to 21, or 25 if in full-time education" is ONE requirement).
-Skip the insurer's internal process (who signs, how long a review takes) unless it decides an
-applicant's eligibility or documents.
+documents they must provide, which medical findings are accepted, accepted with terms, referred
+or declined. Go through the text section by section, and every row of a table that decides
+something, INCLUDING the ones that are simply accepted. Keep a condition and its exceptions
+together ("children up to 21, or 25 if in full-time education" is ONE requirement), but one
+outcome per requirement: "BMI above 40: not eligible for Enhanced; Essential and Family are
+referred" is TWO requirements (decline, refer). Skip the insurer's internal process (who signs,
+how long a review takes, waiting periods of the policy) unless it decides an applicant's
+eligibility or documents.
 
-{_EXCEPTIONS_ONLY}
+You don't write rules here: you only copy what the text says.
 
 For each requirement:
 - quote: copy ONE continuous passage WORD FOR WORD from the text: a sentence, part of a
@@ -54,11 +57,15 @@ For each requirement:
   are sometimes read as "[x]").
 - summary: one sentence that states the requirement in full, with its numbers, plan names and
   documents, so it can be understood without the text.
-- action:
-  "add_rule": an exception (decline, review, a document, special terms) that no current rule
-  covers yet;
-  "already_covered": a current rule in the snapshot already does exactly this;
-  "no_rule": it only says something is fine."""
+- outcome: what the TEXT says happens to the applicant, nothing else:
+  "accept": eligible on standard terms ("Accept, standard terms", "smokers are eligible");
+  "accept_with_terms": eligible with a waiting period, an exclusion or a premium loading;
+  "refer": an underwriter reviews or decides ("refer to medical underwriter", "at the
+  underwriter's discretion");
+  "decline": not eligible ("not eligible", "must be 18 to 64" for those outside it);
+  "require_document": a document must be provided.
+- covered_by: the name of the current rule (from the snapshot) that already does exactly this,
+  or null."""
 
 
 def build_requirements_prompt(
@@ -79,14 +86,14 @@ into rules.
 You get the REQUIREMENTS (number, page, summary and the guidelines' exact words) and
 {_SNAPSHOT_FORMAT}. Write the parameters and rules the requirements need: EVERY requirement gets
 at least one rule, and each rule's "requirement" is the number of the requirement it encodes.
+A rule's outcome is its requirement's outcome, except "accept_with_terms", which becomes "refer"
+(the rules have no outcome for terms yet; the description says what the terms are).
 Write only what the requirement states, with its exact thresholds. Never repeat a rule that is
 already in the current rulebook.
 
 {_EXCEPTIONS_ONLY}
 - An eligibility condition becomes its OPPOSITE: "the principal must be 18 to 64" becomes
   IF age less_than 18 OR age greater_than 64 THEN decline.
-- Acceptance with extra terms the outcomes can't express (a waiting period, an exclusion, a
-  loading) becomes "refer", and the description says what the text asks for.
 
 Parameters are facts about an applicant that the rules test (age, BMI, smoker, conditions…).
 Write them first. The CURRENT rulebook's parameters are the registry:
@@ -125,7 +132,8 @@ description: one short plain-English sentence."""
 
 def build_rules_prompt(requirements: list[FoundRequirement], current: Rulebook | None) -> str:
     listed = "\n".join(
-        f'{r.number}. (page {r.source.page or "?"}) {r.summary}\n   Text: "{r.source.quote}"'
+        f"{r.number}. (page {r.source.page or '?'}, outcome: {r.outcome}) {r.summary}\n"
+        f'   Text: "{r.source.quote}"'
         for r in requirements
     )
     return f"CURRENT RULEBOOK (snapshot):\n{snapshot(current)}\n\nREQUIREMENTS:\n{listed}"
@@ -146,6 +154,9 @@ exactly as it was.
   text has no such passage, remove that item.
 - "no rule written for it": add the rule(s) for that requirement.
 - "there is no requirement N": set the rule's requirement to the right number.
+- "its outcome is …, but requirement N says …": use the outcome given, or point the rule to the
+  right requirement.
+- "there is no current rule": use a name from the snapshot, or null.
 - "unknown parameter": use a parameter that exists, or add it to parameters.
 - "not used by any rule": remove the parameter.
 - A name already used by something different: pick another name, or reuse the existing one if

@@ -82,17 +82,21 @@ Applicant docs ─► read (OCR) ─► LLM fills parameter values (with sources
     current rulebook: a short list written by code (each parameter with its kind, type and
     values; each rule as one line "IF … THEN …"), not the full JSON. Only **additions** come back
     - **Step 1, what the guidelines require:** every statement that decides something, with its
-      exact quote and a one-sentence summary, marked `add_rule`, `already_covered` (a current
-      rule does it) or `no_rule` (it only says something is fine)
-    - **Step 2, the rules:** the numbered `add_rule` requirements → the parameters (written
+      exact quote, a one-sentence summary, the **outcome the text states** (`accept`,
+      `accept_with_terms`, `refer`, `decline`, `require_document`) and `covered_by` (a current
+      rule that already does it). The LLM only copies what the text says; **code decides** what
+      needs a rule (not `accept`, not covered)
+    - **Step 2, the rules:** the numbered requirements that need a rule → the parameters (written
       first, reusing the snapshot's names: `age`, not `applicant_age`) and the rules; each rule
       says which requirement it encodes, and code gives it that requirement's checked quote as
       its source (so step 2 can't invent a quote). Parameters sit in step 2, not step 1, so a
       rule that needs a new parameter can still add it during a repair
     - **Code checks after each step:** each quote is really in the text (ignoring line breaks and
       spaces, so quotes across pages still match) and its page; the rulebook checks; a duplicate
-      of a current rule is skipped; and **coverage: every `add_rule` requirement has a rule** (so
-      a missed rule shows up as a problem, and the page lists any still missed)
+      of a current rule is skipped; each rule's outcome is its requirement's (`accept_with_terms`
+      → `refer` for now), and `covered_by` names a real rule; and **coverage: every requirement
+      that needs a rule has one** (so a missed rule shows up as a problem, and the page lists
+      any still missed)
     - **Repair loop:** if a step has problems, they go back to the LLM with its own answer, to
       fix (at most 2 times); the answer with the fewest problems is kept. A plain loop, no
       LangGraph (the flow is a straight line)
