@@ -65,3 +65,19 @@ def test_punctuation_at_the_edges_of_a_quote_does_not_matter():
     document = DocumentText(text, [PageSpan(1, 0, len(text))])
     assert document.locate("A spouse requires a marriage certificate.") == (1, 1)
     assert document.locate("A spouse needs a marriage certificate.") is None
+
+
+# Two bullets quoted together: Layout reads the bullet between them as a stray "." (or "•")
+def test_bullets_between_quoted_lines_do_not_break_a_quote():
+    text = "age.\n. Principal: 18 to 64 years.\n. Spouse: 18 to 64 years.\n• Child: up to 21."
+    document = DocumentText(text, [PageSpan(1, 0, len(text))])
+    quote = "Principal: 18 to 64 years. Spouse: 18 to 64 years. Child: up to 21."
+    assert document.locate(quote) == (1, 1)
+
+
+# A dot that isn't alone still counts: numbers and sentence ends must match exactly
+def test_dots_inside_numbers_still_count():
+    text = "HbA1c above 7.5% is referred."
+    document = DocumentText(text, [PageSpan(1, 0, len(text))])
+    assert document.locate("HbA1c above 7.5%") == (1, 1)
+    assert document.locate("HbA1c above 75%") is None

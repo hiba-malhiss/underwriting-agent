@@ -23,6 +23,12 @@ from app.core.errors import BadGatewayError
 _CHECKBOX_MARKS = {":selected:": "[x]", ":unselected:": "[ ]"}
 _CHECKBOX_SHOWN = set(_CHECKBOX_MARKS.values())
 
+# Quote matching reads the text as tokens: a checkbox mark, a bullet symbol standing alone
+# (spaces or a line edge on both sides), a run of spaces, or any other single character
+_BULLET_CHARS = r"[.•·●▪‣◦*\-–—]"
+_TOKEN = re.compile(rf"\[x\]|\[ \]|(?<!\S){_BULLET_CHARS}(?!\S)|\s+|\S")
+_BULLET = re.compile(_BULLET_CHARS)
+
 # Typographic characters normalised for quote matching: the LLM often writes plain ASCII
 _SAME_CHARACTER = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"', "–": "-", "—": "-"})
 
@@ -82,13 +88,15 @@ def _squeeze(text: str) -> tuple[str, list[int]]:
     """`text` with every run of whitespace turned into one space (and curly quotes / dashes made
     plain), plus, for each kept character, its offset in the original text.
 
-    Checkbox marks ("[x]", "[ ]") count as spaces: Layout also reads bullet points as ticked
-    boxes, so "[x]" can sit in the middle of a sentence the LLM quotes without it."""
+    Checkbox marks ("[x]", "[ ]") and bullet symbols standing alone (". " at a line start, "•",
+    "·", "-") count as spaces: Layout reads bullet points as ticked boxes or as a stray ".", so
+    they can sit between two bullets the LLM quotes together. A dot inside a number (7.5) or at a
+    sentence's end isn't alone, so it still counts."""
     kept: list[str] = []
     offsets: list[int] = []
-    for match in re.finditer(r"\[x\]|\[ \]|\s+|\S", text.translate(_SAME_CHARACTER)):
+    for match in _TOKEN.finditer(text.translate(_SAME_CHARACTER)):
         piece = match.group(0)
-        if piece.isspace() or piece in _CHECKBOX_SHOWN:
+        if piece.isspace() or piece in _CHECKBOX_SHOWN or _BULLET.fullmatch(piece):
             if kept and kept[-1] != " ":
                 kept.append(" ")
                 offsets.append(match.start())
