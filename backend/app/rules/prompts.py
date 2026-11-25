@@ -44,7 +44,9 @@ Rules read "IF conditions THEN outcome".
   leaves it to the underwriter's discretion (judgment rules have no conditions).
 - outcome: "decline" (not eligible), "refer" (an underwriter must review), "require_document"
   (a document must be provided first). No other outcomes.
-- conditions: {{"all_of": [...]}} (AND) or {{"any_of": [...]}} (OR); groups can be nested.
+- conditions: {{"match": "all", "items": [...]}} (AND) or {{"match": "any", "items": [...]}}
+  (OR). An item is a condition or another group, e.g. A AND (B OR C) is
+  {{"match": "all", "items": [A, {{"match": "any", "items": [B, C]}}]}}.
   Each condition: {{"parameter": <name>, "operator": <operator>, "value": <value>}}.
 - operators per value_type: {json.dumps({k: sorted(v) for k, v in OPERATORS_BY_VALUE_TYPE.items()})}
   ("in", "not_in", "contains_any" take a list of values).

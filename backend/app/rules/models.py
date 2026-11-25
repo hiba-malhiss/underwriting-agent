@@ -7,7 +7,8 @@ The code only knows these SHAPES, never specific parameters, so a new parameter 
 A rule reads: "IF <conditions> THEN <outcome>", e.g.
 
     {"name": "max_age", "rule_type": "automatic",
-     "conditions": {"all_of": [{"parameter": "age", "operator": "greater_than", "value": 65}]},
+     "conditions": {"match": "all",
+                    "items": [{"parameter": "age", "operator": "greater_than", "value": 65}]},
      "outcome": "decline", ...}
 
 `judgment` rules ("at the underwriter's discretion") have no conditions: they always go to a
@@ -89,10 +90,13 @@ class Condition(Strict):
 
 
 class ConditionGroup(Strict):
-    """Conditions joined by AND (`all_of`) or OR (`any_of`); groups can be nested."""
+    """Conditions joined by AND (match "all") or OR (match "any"); an item can be another group.
 
-    all_of: list[Condition | ConditionGroup] | None = None
-    any_of: list[Condition | ConditionGroup] | None = None
+    One list plus how to join it, not two lists (all_of / any_of): in strict JSON every field is
+    required, so with two lists the LLM filled the unused one with invented conditions."""
+
+    match: Literal["all", "any"]
+    items: list[Condition | ConditionGroup]
 
 
 class Rule(Strict):

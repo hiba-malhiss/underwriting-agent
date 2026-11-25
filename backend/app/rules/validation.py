@@ -96,14 +96,10 @@ def _rule_problems(rule: Rule, parameters: dict[str, Parameter]) -> list[str]:
 
 
 def _group_problems(group: ConditionGroup, parameters: dict[str, Parameter]) -> list[str]:
-    # An empty list counts as "not there": in strict JSON the LLM sends both, one as []
-    if not group.all_of and not group.any_of:
+    if not group.items:
         return ["a condition group can't be empty"]
-    if group.all_of and group.any_of:
-        return ["each condition group needs exactly one of all_of or any_of"]
-    items = group.all_of or group.any_of
     problems = []
-    for item in items:
+    for item in group.items:
         if isinstance(item, ConditionGroup):
             problems += _group_problems(item, parameters)
         else:

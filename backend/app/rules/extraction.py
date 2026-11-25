@@ -218,11 +218,8 @@ def condition_key(node: Condition | ConditionGroup) -> tuple:
             value_key(node.value),
         )
 
-    is_all = bool(node.all_of)
-    items = node.all_of if is_all else (node.any_of or [])
-
     keys = sorted(
-        (condition_key(item) for item in items),
+        (condition_key(item) for item in node.items),
         key=repr,
     )
 
@@ -230,7 +227,7 @@ def condition_key(node: Condition | ConditionGroup) -> tuple:
         return keys[0]
 
     return (
-        "all_of" if is_all else "any_of",
+        node.match,
         tuple(keys),
     )
 
@@ -311,7 +308,7 @@ def iter_conditions(node: Condition | ConditionGroup):
         yield node
         return
 
-    for item in (node.all_of or []) + (node.any_of or []):
+    for item in node.items:
         yield from iter_conditions(item)
 
 

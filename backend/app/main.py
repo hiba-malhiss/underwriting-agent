@@ -21,6 +21,7 @@ from app.infrastructure.database import (
 )
 from app.infrastructure.document_reader import DocumentReader
 from app.infrastructure.llm import LanguageModel
+from app.rules.controller import router as rules_router
 
 
 # startup => yield => shutdown
@@ -72,6 +73,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Health Insurance Underwriting Agent", lifespan=lifespan)
 register_error_handlers(app)
 app.include_router(documents_router)
+app.include_router(rules_router)
 
 
 @app.get("/health")

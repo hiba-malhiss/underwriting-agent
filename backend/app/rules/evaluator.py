@@ -8,8 +8,8 @@ Each rule is a check the applicant passes or not. Its status is one of:
 - needs_judgment: a judgment rule; an underwriter decides
 
 Missing values use three-valued logic (true / false / unknown):
-- all_of (AND): any false → false; else any unknown → unknown; else true
-- any_of (OR):  any true → true; else any unknown → unknown; else false
+- match "all" (AND): any false → false; else any unknown → unknown; else true
+- match "any" (OR):  any true → true; else any unknown → unknown; else false
 So a missing value only matters when it could change the answer.
 
 Run only rulebooks that passed validation.find_problems: this module trusts the shapes.
@@ -74,16 +74,13 @@ def _evaluate_rule(rule: Rule, values: dict[str, Any]) -> RuleResult:
 
 
 def _group(group: ConditionGroup, values: dict[str, Any], notes: list[str], missing: list[str]):
-    # An empty list counts as "not there" (validation allows only one non-empty list)
-    is_all_of = bool(group.all_of)
-    items = group.all_of if is_all_of else (group.any_of or [])
     results = [
         _group(item, values, notes, missing)
         if isinstance(item, ConditionGroup)
         else _condition(item, values, notes, missing)
-        for item in items
+        for item in group.items
     ]
-    if is_all_of:
+    if group.match == "all":
         if False in results:
             return False
         return UNKNOWN if UNKNOWN in results else True

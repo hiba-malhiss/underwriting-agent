@@ -39,7 +39,10 @@ BMI_RULE = {
     "name": "high_bmi_report",
     "description": "BMI above 40 needs a medical report",
     "rule_type": "automatic",
-    "conditions": {"all_of": [{"parameter": "bmi", "operator": "greater_than", "value": 40}]},
+    "conditions": {
+        "match": "all",
+        "items": [{"parameter": "bmi", "operator": "greater_than", "value": 40}],
+    },
     "outcome": "require_document",
     "source": source("A BMI above 40 requires a medical report."),
 }
@@ -91,7 +94,11 @@ def max_age_rule(name: str, conditions: dict) -> dict:
 # Duplicates are found by what a rule DOES, not by its name (the LLM renames things each run)
 def test_the_same_rule_under_another_name_is_skipped():
     renamed = max_age_rule(
-        "too_old", {"all_of": [{"parameter": "age", "operator": "greater_than", "value": 65.0}]}
+        "too_old",
+        {
+            "match": "all",
+            "items": [{"parameter": "age", "operator": "greater_than", "value": 65.0}],
+        },
     )
     proposal = check(suggestion([], [renamed]), sample_rulebook())
     assert proposal.skipped == ["rule too_old (same as current rule max_age)"]
@@ -102,16 +109,20 @@ def test_the_same_rule_under_another_name_is_skipped():
 def test_condition_order_and_single_item_groups_do_not_matter():
     a = {"parameter": "conditions", "operator": "contains", "value": "diabetes_type_2"}
     b = {
-        "any_of": [
+        "match": "any",
+        "items": [
             {"parameter": "smoker", "operator": "equals", "value": True},
-            {"all_of": [{"parameter": "bmi", "operator": "greater_than", "value": 30}]},
-        ]
+            {
+                "match": "all",
+                "items": [{"parameter": "bmi", "operator": "greater_than", "value": 30}],
+            },
+        ],
     }
     reordered = {
         "name": "diabetes_again",
         "description": "Same as diabetes_review",
         "rule_type": "automatic",
-        "conditions": {"all_of": [b, a]},
+        "conditions": {"match": "all", "items": [b, a]},
         "outcome": "refer",
         "source": source("A BMI above 40 requires a medical report."),
     }
@@ -121,7 +132,10 @@ def test_condition_order_and_single_item_groups_do_not_matter():
 
 # A rule the LLM suggests twice is kept once
 def test_a_rule_suggested_twice_is_kept_once():
-    conditions = {"all_of": [{"parameter": "age", "operator": "greater_than", "value": 70}]}
+    conditions = {
+        "match": "all",
+        "items": [{"parameter": "age", "operator": "greater_than", "value": 70}],
+    }
     rules = [max_age_rule("over_70", conditions), max_age_rule("older_than_70", conditions)]
     proposal = check(suggestion([], rules), sample_rulebook())
     assert [r.rule.name for r in proposal.rules] == ["over_70"]
@@ -131,7 +145,8 @@ def test_a_rule_suggested_twice_is_kept_once():
 # Same name, different meaning: kept and flagged, not silently dropped
 def test_a_reused_name_with_a_different_meaning_is_flagged_not_dropped():
     different = max_age_rule(
-        "max_age", {"all_of": [{"parameter": "age", "operator": "greater_than", "value": 70}]}
+        "max_age",
+        {"match": "all", "items": [{"parameter": "age", "operator": "greater_than", "value": 70}]},
     )
     proposal = check(suggestion([], [different]), sample_rulebook())
     assert proposal.skipped == []
@@ -156,7 +171,10 @@ def test_a_new_parameter_no_rule_uses_is_flagged():
 def test_rulebook_problems_are_attached_to_their_item():
     wrong = {
         **BMI_RULE,
-        "conditions": {"all_of": [{"parameter": "weight", "operator": "greater_than", "value": 1}]},
+        "conditions": {
+            "match": "all",
+            "items": [{"parameter": "weight", "operator": "greater_than", "value": 1}],
+        },
     }
     rule = check(suggestion([BMI], [wrong])).rules[0]
     assert rule.problems == ["unknown parameter 'weight'"]

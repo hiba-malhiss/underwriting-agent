@@ -24,42 +24,50 @@ def test_the_sample_rulebook_is_valid():
     ("conditions", "expected"),
     [
         (
-            {"all_of": [{"parameter": "weight", "operator": "greater_than", "value": 90}]},
+            {
+                "match": "all",
+                "items": [{"parameter": "weight", "operator": "greater_than", "value": 90}],
+            },
             "unknown parameter 'weight'",
         ),
         (
-            {"all_of": [{"parameter": "smoker", "operator": "greater_than", "value": True}]},
+            {
+                "match": "all",
+                "items": [{"parameter": "smoker", "operator": "greater_than", "value": True}],
+            },
             "'greater_than' can't be used on boolean",
         ),
         (
-            {"all_of": [{"parameter": "age", "operator": "greater_than", "value": "65"}]},
+            {
+                "match": "all",
+                "items": [{"parameter": "age", "operator": "greater_than", "value": "65"}],
+            },
             "needs a number",
         ),
         (
-            {"all_of": [{"parameter": "age", "operator": "greater_than", "value": True}]},
+            {
+                "match": "all",
+                "items": [{"parameter": "age", "operator": "greater_than", "value": True}],
+            },
             "needs a number",
         ),
         (
-            {"all_of": [{"parameter": "conditions", "operator": "contains", "value": "cancer"}]},
+            {
+                "match": "all",
+                "items": [{"parameter": "conditions", "operator": "contains", "value": "cancer"}],
+            },
             "cancer not in the allowed values",
         ),
         (
             {
-                "all_of": [
+                "match": "all",
+                "items": [
                     {"parameter": "conditions", "operator": "contains_any", "value": "asthma"}
-                ]
+                ],
             },
             "needs a list of values",
         ),
-        ({"all_of": [], "any_of": None}, "can't be empty"),
-        ({"all_of": [], "any_of": []}, "can't be empty"),
-        (
-            {
-                "all_of": [{"parameter": "age", "operator": "greater_than", "value": 65}],
-                "any_of": [{"parameter": "age", "operator": "less_than", "value": 18}],
-            },
-            "exactly one of all_of or any_of",
-        ),
+        ({"match": "all", "items": []}, "can't be empty"),
     ],
 )
 def test_condition_mistakes_are_reported_on_the_rule(conditions, expected):
@@ -96,7 +104,12 @@ def test_parameters_are_checked_too():
     "change",
     [
         {"name": "Max Age"},
-        {"conditions": {"all_of": [{"parameter": "age", "operator": ">=", "value": 1}]}},
+        {
+            "conditions": {
+                "match": "all",
+                "items": [{"parameter": "age", "operator": ">=", "value": 1}],
+            }
+        },
         {"source": {"document": "g.pdf", "quote": ""}},
     ],
 )
@@ -110,9 +123,21 @@ def test_ensure_valid_raises_with_every_problem():
         ensure_valid(
             with_rule(
                 conditions={
-                    "all_of": [{"parameter": "weight", "operator": "greater_than", "value": 1}]
+                    "match": "all",
+                    "items": [{"parameter": "weight", "operator": "greater_than", "value": 1}],
                 }
             )
         )
     assert error.value.status_code == 400
     assert "rule max_age: unknown parameter 'weight'" in str(error.value)
+
+
+# The group shape can't carry two lists any more: the old two-list form is refused
+def test_the_old_two_list_shape_is_refused():
+    with pytest.raises(ValidationError):
+        with_rule(
+            conditions={
+                "all_of": [{"parameter": "age", "operator": "greater_than", "value": 65}],
+                "any_of": [{"parameter": "age", "operator": "less_than", "value": 0}],
+            }
+        )

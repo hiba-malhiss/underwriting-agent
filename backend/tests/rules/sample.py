@@ -42,7 +42,8 @@ def sample_rulebook() -> Rulebook:
                     "description": "Over 65 is not eligible",
                     "rule_type": "automatic",
                     "conditions": {
-                        "all_of": [{"parameter": "age", "operator": "greater_than", "value": 65}]
+                        "match": "all",
+                        "items": [{"parameter": "age", "operator": "greater_than", "value": 65}],
                     },
                     "outcome": "decline",
                     "source": source("Applicants over 65 years of age are not eligible"),
@@ -52,7 +53,8 @@ def sample_rulebook() -> Rulebook:
                     "description": "Smokers are referred for review",
                     "rule_type": "automatic",
                     "conditions": {
-                        "all_of": [{"parameter": "smoker", "operator": "equals", "value": True}]
+                        "match": "all",
+                        "items": [{"parameter": "smoker", "operator": "equals", "value": True}],
                     },
                     "outcome": "refer",
                     "source": source("Smokers are referred for review", 2),
@@ -63,19 +65,21 @@ def sample_rulebook() -> Rulebook:
                     "description": "Diabetes with high BMI or smoking",
                     "rule_type": "automatic",
                     "conditions": {
-                        "all_of": [
+                        "match": "all",
+                        "items": [
                             {
                                 "parameter": "conditions",
                                 "operator": "contains",
                                 "value": "diabetes_type_2",
                             },
                             {
-                                "any_of": [
+                                "match": "any",
+                                "items": [
                                     {"parameter": "bmi", "operator": "greater_than", "value": 30},
                                     {"parameter": "smoker", "operator": "equals", "value": True},
-                                ]
+                                ],
                             },
-                        ]
+                        ],
                     },
                     "outcome": "refer",
                     "source": source("Applicants with type 2 diabetes and a BMI above 30", 2),
