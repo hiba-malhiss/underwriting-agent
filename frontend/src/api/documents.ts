@@ -28,6 +28,11 @@ export async function uploadDocument(type: DocumentType, file: File, applicantId
   return response.data;
 }
 
+// GET /documents/file: a URL, not a request, so a viewer (e.g. the PDF drawer) can load it itself
+export function documentFileUrl(type: DocumentType, name: string, applicantId?: string) {
+  return `/documents/file?${new URLSearchParams({ ...params(type, applicantId), name })}`;
+}
+
 // `name` = StoredDocument.name (the stored name, from the list)
 export async function deleteDocument(type: DocumentType, name: string, applicantId?: string) {
   await http.delete("/documents", { params: { ...params(type, applicantId), name } });

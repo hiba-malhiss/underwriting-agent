@@ -42,7 +42,7 @@ export function CurrentRules({ current, loading, error }: Props) {
             </TabsList>
             <TabsContent value="ui" className="space-y-4 pt-2">
               <ParameterBadges parameters={current.parameters} />
-              <ul className="divide-y rounded-lg border">
+              <ul className="space-y-3">
                 {current.rules.map((rule) => (
                   <RuleItem key={rule.name} rule={rule} parameters={parameters} />
                 ))}

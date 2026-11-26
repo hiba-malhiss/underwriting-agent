@@ -128,3 +128,11 @@
     @apply font-sans;
     }
 }
+
+/* A rule's quote highlighted in the PDF (DocumentViewer). The PDF's text layer is transparent
+   over the drawn page, so only the mark's background shows */
+.react-pdf__Page__textContent mark {
+  background: rgb(250 204 21 / 0.45);
+  color: transparent;
+  border-radius: 2px;
+}

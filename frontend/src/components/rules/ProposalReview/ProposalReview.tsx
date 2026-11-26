@@ -94,7 +94,7 @@ export function ProposalReview({
                 No new rules found in this document.
               </p>
             ) : (
-              <ul className="divide-y rounded-lg border">
+              <ul className="space-y-3">
                 {proposal.rules.map(({ rule, problems }) => (
                   <RuleItem
                     key={rule.name}
