@@ -13,6 +13,7 @@ indexers are passed in, so tests give it fakes, and it can be reused outside HTT
 """
 
 import logging
+from pathlib import Path
 from uuid import UUID
 
 from app.documents.types import DOCUMENT_CONFIGS, DocumentType
@@ -64,13 +65,22 @@ class DocumentService:
         """Delete one document. `name` is the stored name the list returned. For applicant
         documents it must be in that applicant's folder, so one applicant's page can't delete
         another applicant's files."""
-        config = DOCUMENT_CONFIGS[document_type]
-        config.validate_applicant_id(applicant_id)
-        folder = config.folder(applicant_id)
-        if not name.startswith(folder) or name == folder:
-            raise DocumentRejectedError("This document doesn't belong to this applicant")
+        _check_owner(document_type, name, applicant_id)
         await self._stores[document_type].delete(name)
         await self._refresh_index(document_type)
+
+    async def download(
+        self, document_type: DocumentType, name: str, applicant_id: UUID | None
+    ) -> tuple[bytes, str]:
+        """One document's content and content type, e.g. to show a rule's quote in its guideline.
+        Same ownership rule as delete."""
+        _check_owner(document_type, name, applicant_id)
+        data = await self._stores[document_type].download(name)
+        extension = Path(name).suffix.lower()
+        content_type = DOCUMENT_CONFIGS[document_type].allowed_types.get(
+            extension, "application/octet-stream"
+        )
+        return data, content_type
 
     async def list_documents(
         self, document_type: DocumentType, applicant_id: UUID | None
@@ -88,3 +98,13 @@ class DocumentService:
             await indexer.run()
         except SearchError as error:
             logger.warning("Couldn't re-index %s documents: %s", document_type, error)
+
+
+def _check_owner(document_type: DocumentType, name: str, applicant_id: UUID | None) -> None:
+    """`name` is a stored name the list returned. For applicant documents it must be in that
+    applicant's folder, so one applicant's page can't reach another applicant's files."""
+    config = DOCUMENT_CONFIGS[document_type]
+    config.validate_applicant_id(applicant_id)
+    folder = config.folder(applicant_id)
+    if not name.startswith(folder) or name == folder:
+        raise DocumentRejectedError("This document doesn't belong to this applicant")

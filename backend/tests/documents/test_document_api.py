@@ -41,6 +41,9 @@ class FakeStore:
     async def delete(self, name):
         self.deleted.append(name)
 
+    async def download(self, name):
+        return b"%PDF-1.7 " + name.encode()
+
 
 @pytest.fixture
 def stores():
@@ -136,6 +139,25 @@ def test_delete_removes_the_document(stores, client):
     assert response.status_code == 204
     assert stores[DocumentType.APPLICANT].deleted == [name]
     assert stores[DocumentType.REQUIREMENT].deleted == []
+
+
+# GET /documents/file: the content, shown in the browser (e.g. the guideline next to a rule)
+def test_a_document_can_be_read(stores, client):
+    response = client.get(
+        "/documents/file", params={"type": "requirement", "name": "guidelines.pdf"}
+    )
+    assert response.status_code == 200
+    assert response.content == b"%PDF-1.7 guidelines.pdf"
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.headers["content-disposition"] == "inline"
+
+
+def test_another_applicants_document_cant_be_read(stores, client):
+    response = client.get(
+        "/documents/file",
+        params={"type": "applicant", "applicant_id": APPLICANT_ID, "name": "someone-else/x.pdf"},
+    )
+    assert response.status_code == 400
 
 
 class MissingBlobStore(FakeStore):

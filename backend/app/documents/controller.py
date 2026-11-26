@@ -3,6 +3,7 @@
     POST /documents?type=requirement                     underwriting guidelines
     POST /documents?type=applicant&applicant_id=<uuid>   an applicant's documents
     GET  /documents?type=…                               same parameters
+    GET  /documents/file?type=…&name=<stored name>       one document's content (e.g. a PDF)
     DELETE /documents?type=…&name=<stored name>          one document (name from the list)
 
 Only HTTP here: read the request, call the service, shape the response. The rules and the
@@ -51,6 +52,15 @@ async def list_documents(
 
 
 # The stored name contains "/" for applicant documents, so it's a query parameter, not a path
+@router.get("/file")
+async def download_document(
+    document_type: TypeParam, name: str, service: Service, applicant_id: UUID | None = None
+) -> Response:
+    data, content_type = await service.download(document_type, name, applicant_id)
+    # inline: the browser shows it (e.g. the guideline next to a rule) instead of saving it
+    return Response(data, media_type=content_type, headers={"Content-Disposition": "inline"})
+
+
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
     document_type: TypeParam, name: str, service: Service, applicant_id: UUID | None = None
