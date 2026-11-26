@@ -77,6 +77,11 @@ class LanguageModel:
                 "OpenAI User' role on the Foundry resource (Access control (IAM))."
             ) from error
         except APIError as error:
+            blocked = _content_filters(error.body)
+            if blocked:
+                raise LanguageModelError(
+                    f"Azure's content filter blocked the prompt ({', '.join(blocked)})"
+                ) from error
             raise LanguageModelError(f"The model request failed: {error.message}") from error
 
         message = response.choices[0].message
@@ -86,3 +91,18 @@ class LanguageModel:
 
     async def close(self) -> None:
         await self._client.close()
+
+
+def _content_filters(body: object) -> list[str]:
+    """Which of Azure's content filters blocked a prompt, e.g. ["jailbreak"] or ["self_harm"].
+    Azure says it in the error body: innererror.content_filter_result → {category: {"filtered":
+    true, …}}. Empty when the error isn't a content filter."""
+    if not isinstance(body, dict) or body.get("code") != "content_filter":
+        return []
+    results = (body.get("innererror") or {}).get("content_filter_result") or {}
+    blocked = [
+        name
+        for name, result in results.items()
+        if isinstance(result, dict) and result.get("filtered")
+    ]
+    return blocked or ["no category given"]

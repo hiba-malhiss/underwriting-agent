@@ -14,7 +14,7 @@ from collections.abc import Callable
 
 from pydantic import BaseModel
 
-from app.infrastructure.llm import LanguageModel, Message
+from app.infrastructure.llm import LanguageModel, LanguageModelError, Message
 from app.rules.generation.prompts import build_repair_prompt
 
 # Repair rounds after the first answer, so at most 3 model calls per step. Each call takes
@@ -39,7 +39,11 @@ async def ask_with_repairs[Answer: BaseModel, Checked](
     most_items = 0
 
     for round_number in range(MAX_REPAIRS + 1):
-        answer = await model.structured(system, conversation, output)
+        try:
+            answer = await model.structured(system, conversation, output)
+        except LanguageModelError as error:  # say which step and round, to find the cause
+            when = "the first answer" if round_number == 0 else f"repair {round_number}"
+            raise LanguageModelError(f"{error} [{output.__name__}, {when}]") from error
         checked, problems = check(answer)
 
         items = count(answer)
