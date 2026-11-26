@@ -84,6 +84,7 @@ class RulesService:
             check=lambda answer: check_requirements(
                 answer, text, document_name, _rulebook(current)
             ),
+            count=lambda answer: len(answer.requirements),
         )
 
     async def _generate_rules(
@@ -106,7 +107,14 @@ class RulesService:
             return proposal, 0
 
         prompt = build_rules_prompt(to_add, _rulebook(current))
-        return await ask_with_repairs(self._model, RULES_PROMPT, prompt, DraftRulebook, check)
+        return await ask_with_repairs(
+            self._model,
+            RULES_PROMPT,
+            prompt,
+            DraftRulebook,
+            check,
+            count=lambda draft: len(draft.rules),
+        )
 
     async def get_current(self) -> RulebookVersion | None:
         return await self._repository.get_current()

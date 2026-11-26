@@ -33,7 +33,11 @@ def no_bad_words(answer: Answer):
 
 
 def ask(model: ScriptedModel):
-    return asyncio.run(ask_with_repairs(model, "system", "first prompt", Answer, no_bad_words))
+    return asyncio.run(
+        ask_with_repairs(
+            model, "system", "first prompt", Answer, no_bad_words, count=lambda a: len(a.words)
+        )
+    )
 
 
 def test_a_clean_answer_needs_no_repair():
@@ -61,6 +65,20 @@ def test_it_stops_after_max_repairs_and_keeps_the_problems():
 def test_a_worse_repair_is_not_kept():
     model = ScriptedModel(["bad"], ["bad", "bad"])
     assert ask(model) == (["bad"], 0)
+
+
+# Deleting a bad item would also delete its problem: never kept, the underwriter decides instead
+def test_a_repair_that_deletes_items_is_never_kept():
+    model = ScriptedModel(["bad", "good"], ["good"])  # "fixes" the problem by deleting it
+    assert ask(model) == (["bad", "good"], 0)  # the first answer, with its problem, for review
+
+    repair = model.conversations[2][-1].content
+    assert "- you removed items: an earlier answer had 2, this one has 1." in repair
+
+
+def test_items_brought_back_after_a_deletion_are_kept():
+    model = ScriptedModel(["bad", "good"], ["good"], ["good", "good"])
+    assert ask(model) == (["good", "good"], 2)
 
 
 def test_new_allowed_values_are_a_note_for_the_reviewer_not_a_problem_to_fix():

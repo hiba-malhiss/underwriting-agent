@@ -156,9 +156,10 @@ def build_repair_prompt(problems: list[str]) -> str:
 {listed}
 
 Send the WHOLE answer again with every problem fixed. Keep everything that had no problem
-exactly as it was.
-- "quote not found": copy ONE continuous passage word for word from the guidelines text. If the
-  text has no such passage, remove that item.
+exactly as it was. NEVER remove a requirement or a rule: if you can't fix one, keep it exactly as
+it is, and a person (the underwriter) will check it.
+- "quote not found": copy ONE continuous passage word for word from the guidelines text. If you
+  can't find it, keep the item as it is.
 - "no rule written for it": add the rule(s) for that requirement.
 - "there is no requirement N": set the rule's requirement to the right number.
 - "its outcome is …, but requirement N says …": use the outcome given, or point the rule to the
