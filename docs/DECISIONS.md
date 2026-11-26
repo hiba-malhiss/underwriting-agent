@@ -21,6 +21,7 @@ makes the mistake impossible) is preferred over a longer prompt.
 | 10 | The prompt would grow with every saved rule | The full rulebook JSON was sent | A **snapshot**: one line per parameter and rule, written by code | `8290f18` |
 | 11 | "Accept, standard terms" lines became "refer" rules (normal BMI, controlled hypertension, mild asthma) | The LLM decided which lines need a rule, and the coverage check then forced a rule for each | Step 1 only copies the **outcome the text states**; **code decides** what needs a rule; each rule's outcome must match its requirement's | `90ad996` |
 | 12 | Judgment rules (waiting periods, pending information) applied to every applicant | Judgment rules had no conditions, so they always went to an underwriter | **Every rule has conditions**; a judgment rule's conditions say who it's about, and only those applicants go to an underwriter | `bd0f101` |
+| 13 | Whole sections missing (ages 18–64, residency), and nothing reported them as missed | Likely (not yet logged): the repair prompt said "quote not found → remove the item", and the loop kept the answer with the fewest problems, so deleting a hard-to-quote requirement looked like a fix | **A repair never deletes:** an answer with fewer items is never kept, and the model is told to send them back; what it can't fix stays, flagged, for the underwriter to decide | `ea763f4` |
 
 ## Still open
 
