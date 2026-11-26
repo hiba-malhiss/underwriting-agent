@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass
 
 from app.core.errors import BadRequestError
-from app.rules.models import Condition, ConditionGroup, Parameter, Rule, Rulebook, ValueType
+from app.rules.domain.models import Condition, ConditionGroup, Parameter, Rule, Rulebook, ValueType
 
 # Allowed values are codes, like names: "type_2_diabetes", not "Type 2 diabetes"
 VALUE_NAME = re.compile(r"^[a-z0-9][a-z0-9_]*$")

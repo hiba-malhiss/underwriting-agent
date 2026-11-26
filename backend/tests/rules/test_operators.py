@@ -2,9 +2,9 @@
 
 import pytest
 
-from app.rules.evaluator import evaluate
-from app.rules.models import Rulebook
-from app.rules.validation import find_problems
+from app.rules.domain.evaluator import evaluate
+from app.rules.domain.models import Rulebook
+from app.rules.domain.validation import find_problems
 from tests.rules.sample import source
 
 

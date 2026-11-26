@@ -3,8 +3,8 @@ each problem belongs to. The LLM is replaced by a fixed answer (the whole flow i
 test_requirements.py)."""
 
 from app.infrastructure.document_reader import DocumentText, PageSpan
-from app.rules.extraction import check_suggestions
-from app.rules.models import Parameter, Rulebook
+from app.rules.domain.models import Parameter, Rulebook
+from app.rules.generation.extraction import check_suggestions
 from tests.rules.sample import sample_rulebook
 
 GUIDE = "guidelines.pdf"

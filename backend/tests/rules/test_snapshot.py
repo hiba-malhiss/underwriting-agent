@@ -1,6 +1,6 @@
 """The snapshot: the current rulebook as short lines for the LLM."""
 
-from app.rules.snapshot import snapshot
+from app.rules.generation.snapshot import snapshot
 from tests.rules.sample import sample_rulebook
 
 

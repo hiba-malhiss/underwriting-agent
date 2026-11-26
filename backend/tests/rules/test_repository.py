@@ -7,8 +7,8 @@ import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.infrastructure.database import create_sessions, create_tables
-from app.rules.models import Rulebook
-from app.rules.repository import RulebookRepository
+from app.rules.domain.models import Rulebook
+from app.rules.persistence.repository import RulebookRepository
 from tests.rules.sample import sample_rulebook
 
 

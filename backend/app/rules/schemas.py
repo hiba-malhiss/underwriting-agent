@@ -6,9 +6,9 @@ from typing import Self
 
 from pydantic import BaseModel
 
-from app.rules.extraction import Proposal
-from app.rules.models import Parameter, Rule
-from app.rules.repository import RulebookVersion
+from app.rules.domain.models import Parameter, Rule
+from app.rules.generation.extraction import Proposal
+from app.rules.persistence.repository import RulebookVersion
 
 
 class ProposeRequest(BaseModel):

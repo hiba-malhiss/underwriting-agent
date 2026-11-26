@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from app.core.errors import ConflictError
-from app.rules.models import Rulebook
-from app.rules.tables import ParameterRow, RulebookVersionRow, RuleRow
+from app.rules.domain.models import Rulebook
+from app.rules.persistence.tables import ParameterRow, RulebookVersionRow, RuleRow
 
 
 @dataclass(frozen=True)

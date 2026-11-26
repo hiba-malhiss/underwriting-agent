@@ -1,6 +1,6 @@
 """A small rulebook like the one the LLM would build from health underwriting guidelines."""
 
-from app.rules.models import Rulebook
+from app.rules.domain.models import Rulebook
 
 GUIDE = "health-underwriting-guidelines.pdf"
 

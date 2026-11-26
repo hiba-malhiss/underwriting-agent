@@ -16,25 +16,25 @@ from app.core.errors import ConflictError
 from app.infrastructure.document_reader import DocumentReader, DocumentText
 from app.infrastructure.llm import LanguageModel
 from app.infrastructure.storage.blob import BlobStore
-from app.rules.extraction import Proposal
-from app.rules.models import Rulebook
-from app.rules.parameter_checks import merge_parameters
-from app.rules.prompts import (
+from app.rules.domain.models import Rulebook
+from app.rules.domain.validation import ensure_valid
+from app.rules.generation.extraction import Proposal
+from app.rules.generation.parameter_checks import merge_parameters
+from app.rules.generation.prompts import (
     REQUIREMENTS_PROMPT,
     RULES_PROMPT,
     build_requirements_prompt,
     build_rules_prompt,
 )
-from app.rules.repair import ask_with_repairs
-from app.rules.repository import RulebookRepository, RulebookVersion
-from app.rules.requirements import (
+from app.rules.generation.repair import ask_with_repairs
+from app.rules.generation.requirements import (
     DraftRulebook,
     FoundRequirement,
     RequirementList,
     check_requirements,
     check_rules,
 )
-from app.rules.validation import ensure_valid
+from app.rules.persistence.repository import RulebookRepository, RulebookVersion
 
 
 class RulesChangedError(ConflictError):

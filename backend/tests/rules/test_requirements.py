@@ -4,10 +4,9 @@ coverage check. The LLM is replaced by fixed answers."""
 import asyncio
 from datetime import UTC, datetime
 
-from app.rules.models import Rulebook
-from app.rules.prompts import build_requirements_prompt, build_rules_prompt
-from app.rules.repository import RulebookVersion
-from app.rules.requirements import (
+from app.rules.domain.models import Rulebook
+from app.rules.generation.prompts import build_requirements_prompt, build_rules_prompt
+from app.rules.generation.requirements import (
     DraftRulebook,
     RequirementList,
     check_requirements,
@@ -15,6 +14,7 @@ from app.rules.requirements import (
     rules_from_drafts,
     wrong_outcomes,
 )
+from app.rules.persistence.repository import RulebookVersion
 from app.rules.service import RulesService
 from tests.rules.sample import sample_rulebook
 from tests.rules.test_extraction import BMI, GUIDE, TEXT

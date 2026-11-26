@@ -21,7 +21,7 @@ from app.documents.types import DocumentType
 from app.infrastructure.document_reader import DocumentReader
 from app.infrastructure.llm import LanguageModel
 from app.infrastructure.storage.blob import BlobStore
-from app.rules.repository import RulebookRepository
+from app.rules.persistence.repository import RulebookRepository
 from app.rules.service import RulesService
 
 

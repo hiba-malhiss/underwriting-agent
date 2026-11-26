@@ -14,7 +14,7 @@ Nothing is saved here.
 from dataclasses import dataclass, field
 
 from app.infrastructure.document_reader import DocumentText
-from app.rules.models import (
+from app.rules.domain.models import (
     Condition,
     ConditionGroup,
     Parameter,
@@ -22,13 +22,13 @@ from app.rules.models import (
     Rulebook,
     Source,
 )
-from app.rules.parameter_checks import (
+from app.rules.domain.validation import find_problems
+from app.rules.generation.parameter_checks import (
     NEW_ALLOWED_VALUES,
     check_parameters,
     merge_parameters,
     used_parameters,
 )
-from app.rules.validation import find_problems
 
 
 @dataclass(frozen=True)

@@ -7,7 +7,7 @@ only checked when a connection opens, so open connections keep working; the pool
 connections every 30 minutes, so new ones always get a fresh token.
 
 The identity must be a MySQL Entra user (the server's Entra admin, for now). Tables belong to
-the features (e.g. rules/tables.py); they all share `Base`.
+the features (e.g. rules/persistence/tables.py); they all share `Base`.
 """
 
 import ssl

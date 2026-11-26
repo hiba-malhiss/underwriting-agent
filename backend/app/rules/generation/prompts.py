@@ -18,10 +18,10 @@ wording can be read and changed in one place.
 import json
 
 from app.infrastructure.document_reader import DocumentText
-from app.rules.models import Rulebook
-from app.rules.requirements import FoundRequirement
-from app.rules.snapshot import snapshot
-from app.rules.validation import OPERATORS_BY_VALUE_TYPE
+from app.rules.domain.models import Rulebook
+from app.rules.domain.validation import OPERATORS_BY_VALUE_TYPE
+from app.rules.generation.requirements import FoundRequirement
+from app.rules.generation.snapshot import snapshot
 
 _SNAPSHOT_FORMAT = """a snapshot of the CURRENT rulebook (one line per parameter:
 name (kind, type: allowed values, unit): description; one line per rule:

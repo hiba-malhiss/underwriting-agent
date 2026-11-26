@@ -5,9 +5,9 @@ import asyncio
 
 from pydantic import BaseModel
 
-from app.rules.extraction import Proposal, SuggestedParameter, problems_to_fix
-from app.rules.models import Parameter
-from app.rules.repair import MAX_REPAIRS, ask_with_repairs
+from app.rules.domain.models import Parameter
+from app.rules.generation.extraction import Proposal, SuggestedParameter, problems_to_fix
+from app.rules.generation.repair import MAX_REPAIRS, ask_with_repairs
 
 
 class Answer(BaseModel):

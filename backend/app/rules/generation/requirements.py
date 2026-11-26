@@ -23,8 +23,13 @@ from typing import Literal
 from pydantic import Field
 
 from app.infrastructure.document_reader import DocumentText
-from app.rules.extraction import Proposal, check_suggestions, locate_quote, problems_to_fix
-from app.rules.models import Outcome, Parameter, Rule, Rulebook, RuleLogic, Source, Strict
+from app.rules.domain.models import Outcome, Parameter, Rule, Rulebook, RuleLogic, Source, Strict
+from app.rules.generation.extraction import (
+    Proposal,
+    check_suggestions,
+    locate_quote,
+    problems_to_fix,
+)
 
 # What the text says happens to the applicant. accept: eligible on standard terms (needs no
 # rule); accept_with_terms: eligible with a waiting period, an exclusion or a loading

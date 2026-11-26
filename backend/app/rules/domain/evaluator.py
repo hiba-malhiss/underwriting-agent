@@ -21,7 +21,7 @@ Run only rulebooks that passed validation.find_problems: this module trusts the 
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from app.rules.models import Condition, ConditionGroup, Outcome, Rule, Rulebook
+from app.rules.domain.models import Condition, ConditionGroup, Outcome, Rule, Rulebook
 
 Status = Literal["passed", "not_passed", "missing_data", "needs_judgment"]
 UNKNOWN = None  # the third truth value, next to True and False

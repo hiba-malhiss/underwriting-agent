@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.rules.evaluator import evaluate
+from app.rules.domain.evaluator import evaluate
 from tests.rules.sample import sample_rulebook
 
 

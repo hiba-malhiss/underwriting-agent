@@ -16,7 +16,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 
 from app.rules.dependencies import get_rules_service
-from app.rules.models import Rulebook
+from app.rules.domain.models import Rulebook
 from app.rules.schemas import (
     ProposalResponse,
     ProposeRequest,

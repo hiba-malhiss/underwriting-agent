@@ -12,7 +12,7 @@ For each suggested parameter:
 
 from dataclasses import dataclass, field
 
-from app.rules.models import Condition, ConditionGroup, Parameter, Rule
+from app.rules.domain.models import Condition, ConditionGroup, Parameter, Rule
 
 # Starts the note on a parameter that gains allowed values: a note for the reviewer, not a mistake
 # for the model to fix

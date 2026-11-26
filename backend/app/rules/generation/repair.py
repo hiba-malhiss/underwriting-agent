@@ -10,7 +10,7 @@ from collections.abc import Callable
 from pydantic import BaseModel
 
 from app.infrastructure.llm import LanguageModel, Message
-from app.rules.prompts import build_repair_prompt
+from app.rules.generation.prompts import build_repair_prompt
 
 # Repair rounds after the first answer, so at most 3 model calls per step. Each call takes
 # around 20-40 seconds, so more rounds would make the user wait too long.

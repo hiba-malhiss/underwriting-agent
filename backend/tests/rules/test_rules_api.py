@@ -11,10 +11,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
 from app.rules.dependencies import get_rules_service  # noqa: E402
-from app.rules.models import Rulebook  # noqa: E402
-from app.rules.repository import RulebookVersion  # noqa: E402
+from app.rules.domain.models import Rulebook  # noqa: E402
+from app.rules.domain.validation import RulebookInvalidError  # noqa: E402
+from app.rules.persistence.repository import RulebookVersion  # noqa: E402
 from app.rules.service import RulesChangedError, RulesService  # noqa: E402
-from app.rules.validation import RulebookInvalidError  # noqa: E402
 from tests.rules.sample import sample_rulebook, source  # noqa: E402
 
 NEW_RULE = {

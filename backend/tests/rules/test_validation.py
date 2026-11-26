@@ -3,8 +3,8 @@
 import pytest
 from pydantic import ValidationError
 
-from app.rules.models import Rulebook
-from app.rules.validation import RulebookInvalidError, ensure_valid, find_problems
+from app.rules.domain.models import Rulebook
+from app.rules.domain.validation import RulebookInvalidError, ensure_valid, find_problems
 from tests.rules.sample import sample_rulebook
 
 

@@ -14,6 +14,11 @@ infrastructure/  everything that talks to Azure (credential, storage/, later sea
 main.py          composition root only: shared clients + module wiring
 ```
 
+- **A big feature splits by responsibility inside its own folder**, only when it really has many
+  files (`documents/` stays flat). `rules/`: controller, service, dependencies, schemas at its
+  root, then `domain/` (format, checks, evaluator: no LLM, no database), `generation/` (LLM
+  prompts, extraction steps, repair loop) and `persistence/` (repository, tables). `domain/`
+  imports neither of the other two.
 - **Dependency rule:** `feature → infrastructure → core`. `core` imports no app module;
   `infrastructure` imports no feature.
 - **Controller** = HTTP only. **Service** = business rules, plain Python (no FastAPI, no settings).

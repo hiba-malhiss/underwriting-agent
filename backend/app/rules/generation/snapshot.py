@@ -16,7 +16,7 @@ Enough for the LLM to reuse parameter names and see which rules exist, in far fe
 
 import json
 
-from app.rules.models import Condition, ConditionGroup, Parameter, Rule, Rulebook
+from app.rules.domain.models import Condition, ConditionGroup, Parameter, Rule, Rulebook
 
 _JOINERS = {"all": " AND ", "any": " OR "}
 
