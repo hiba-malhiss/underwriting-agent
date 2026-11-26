@@ -101,11 +101,11 @@ def ensure_valid(rulebook: Rulebook) -> None:
 
 def _rule_problems(rule: Rule, parameters: dict[str, Parameter]) -> list[str]:
     problems = []
-    if rule.rule_type == "automatic" and rule.conditions is None:
-        problems.append("an automatic rule needs conditions")
-    if rule.rule_type == "judgment" and rule.conditions is not None:
-        problems.append("a judgment rule has no conditions: it always goes to a human")
-    if rule.conditions is not None:
+    # Every rule says WHEN it applies, a judgment rule too: without conditions it would apply
+    # to every applicant
+    if rule.conditions is None:
+        problems.append("every rule needs conditions (when it applies)")
+    else:
         problems += _group_problems(rule.conditions, parameters)
     return problems
 

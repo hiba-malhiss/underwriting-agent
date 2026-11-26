@@ -19,9 +19,14 @@ export function RuleItem({ rule, parameters, problems = [], before }: Props) {
       {before}
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={rule.outcome === "decline" ? "destructive" : "secondary"}>
+          <Badge
+            variant={rule.outcome === "decline" ? "destructive" : "secondary"}
+          >
             {OUTCOME_LABELS[rule.outcome]}
           </Badge>
+          {rule.rule_type === "judgment" && (
+            <Badge variant="outline">Underwriter decides</Badge>
+          )}
           <span className="font-medium">{rule.description}</span>
         </div>
 
@@ -30,17 +35,24 @@ export function RuleItem({ rule, parameters, problems = [], before }: Props) {
           {rule.conditions ? (
             <RuleConditions node={rule.conditions} parameters={parameters} />
           ) : (
-            <span>an underwriter decides (judgment)</span>
+            <span className="text-destructive">
+              no conditions (applies to everyone)
+            </span>
           )}
         </div>
 
         <blockquote className="border-l-2 pl-3 text-xs text-muted-foreground">
           “{rule.source.quote}”
-          <span className="ml-1 whitespace-nowrap">· {pagesText(rule.source)}</span>
+          <span className="ml-1 whitespace-nowrap">
+            · {pagesText(rule.source)}
+          </span>
         </blockquote>
 
         {problems.map((problem) => (
-          <p key={problem} className="flex items-center gap-1 text-xs text-destructive">
+          <p
+            key={problem}
+            className="flex items-center gap-1 text-xs text-destructive"
+          >
             <AlertTriangleIcon className="size-3.5 shrink-0" /> {problem}
           </p>
         ))}

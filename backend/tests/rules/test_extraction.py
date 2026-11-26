@@ -201,3 +201,21 @@ def test_rulebook_problems_are_attached_to_their_item():
     }
     rule = check(suggestion([BMI], [wrong])).rules[0]
     assert rule.problems == ["unknown parameter 'weight'"]
+
+
+# Judgment rules are compared by their conditions too: one table (one quote) can give several
+def test_judgment_rules_with_the_same_quote_but_other_conditions_are_both_kept():
+    def heart_judgment(name: str, value: int) -> dict:
+        rule = max_age_rule(
+            name,
+            {
+                "match": "all",
+                "items": [{"parameter": "age", "operator": "greater_than", "value": value}],
+            },
+        )
+        return {**rule, "rule_type": "judgment", "outcome": "refer"}
+
+    rules = [heart_judgment("first", 50), heart_judgment("second", 60)]
+    proposal = check(suggestion([], rules), sample_rulebook())
+    assert [r.rule.name for r in proposal.rules] == ["first", "second"]
+    assert proposal.skipped == []

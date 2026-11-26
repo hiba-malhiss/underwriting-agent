@@ -11,8 +11,8 @@ A rule reads: "IF <conditions> THEN <outcome>", e.g.
                     "items": [{"parameter": "age", "operator": "greater_than", "value": 65}]},
      "outcome": "decline", ...}
 
-`judgment` rules ("at the underwriter's discretion") have no conditions: they always go to a
-human.
+Every rule has conditions, saying WHEN it applies. For a `judgment` rule ("heart conditions are
+at the underwriter's discretion") they say who it's about, and an underwriter decides for them.
 
 Pydantic models, so the same shapes give the API's schemas and the LLM's strict JSON schema.
 """
@@ -51,7 +51,7 @@ Operator = Literal[
     "is_present",  # a value was found (takes no value)
 ]
 
-# automatic: code decides from the conditions; judgment: always goes to a human
+# When the conditions are true: automatic → the outcome happens; judgment → an underwriter decides
 RuleType = Literal["automatic", "judgment"]
 # decline: not covered; refer: an underwriter decides; require_document: wait for a document.
 # No rule applies → accepted as normal (rules only describe the exceptions).
@@ -120,7 +120,9 @@ class RuleLogic(Strict):
     name: str = Field(pattern=NAME_PATTERN)
     description: str  # the rule in plain words, for the reviewer
     rule_type: RuleType
-    conditions: ConditionGroup | None = None  # required for automatic rules, none for judgment
+    # Required (validation reports a rule without them). Optional here only so an old saved rule
+    # without conditions can still be loaded and reported, instead of breaking the page
+    conditions: ConditionGroup | None = None
     outcome: Outcome
 
 

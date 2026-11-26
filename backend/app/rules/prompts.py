@@ -112,8 +112,15 @@ Write them first. The CURRENT rulebook's parameters are the registry:
   calculated.
 
 Rules read "IF conditions THEN outcome".
-- rule_type: "automatic" when code can decide it from parameter values; "judgment" when the text
-  leaves it to the underwriter's discretion (judgment rules have no conditions).
+- EVERY rule has conditions: they say WHEN it applies. A rule without conditions would apply to
+  every applicant.
+- rule_type: "automatic" when the outcome follows directly from the values; "judgment" when the
+  text leaves the decision to the underwriter's discretion. A judgment rule's conditions say who
+  it's about ("heart conditions are at the underwriter's discretion": IF conditions contains
+  "heart_disease"), and an underwriter decides for them.
+- When the text gives no clear test ("complex medical histories are assessed individually"),
+  use one yes/no parameter that names the fact (complex_medical_history), with a clear
+  description. Never invent thresholds the text doesn't give.
 - outcome: "decline" (not eligible), "refer" (an underwriter must review), "require_document"
   (a document must be provided first). No other outcomes.
 - conditions: {{"match": "all", "items": [...]}} (AND) or {{"match": "any", "items": [...]}}

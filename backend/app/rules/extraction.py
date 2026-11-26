@@ -153,17 +153,13 @@ def check_rules(
 
 
 def rule_key(rule: Rule) -> tuple:
-    """Build a key representing what the rule does."""
+    """Build a key representing what the rule does: its type, outcome and conditions."""
 
-    if rule.rule_type == "judgment" or not rule.conditions:
-        return (
-            "judgment",
-            rule.outcome,
-            normalize_quote(rule.source.quote),
-        )
+    if not rule.conditions:  # invalid (validation reports it): fall back to the quote
+        return (rule.rule_type, rule.outcome, normalize_quote(rule.source.quote))
 
     return (
-        "automatic",
+        rule.rule_type,
         rule.outcome,
         condition_key(rule.conditions),
     )

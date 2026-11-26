@@ -39,9 +39,10 @@ def _parameter_line(parameter: Parameter) -> str:
 
 
 def _rule_line(rule: Rule) -> str:
-    if rule.conditions is None:  # judgment: no conditions, the description says what it's about
-        return f"- {rule.name}: JUDGMENT {rule.description} THEN {rule.outcome}"
-    return f"- {rule.name}: IF {_conditions(rule.conditions)} THEN {rule.outcome}"
+    judgment = " (judgment)" if rule.rule_type == "judgment" else ""
+    if rule.conditions is None:  # invalid, but old rules may lack them: describe it instead
+        return f"- {rule.name}: {rule.description} THEN {rule.outcome}{judgment}"
+    return f"- {rule.name}: IF {_conditions(rule.conditions)} THEN {rule.outcome}{judgment}"
 
 
 def _conditions(node: Condition | ConditionGroup, nested: bool = False) -> str:

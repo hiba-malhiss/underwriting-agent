@@ -77,8 +77,11 @@ def test_condition_mistakes_are_reported_on_the_rule(conditions, expected):
 
 
 def test_rule_type_must_fit_its_conditions():
-    assert "needs conditions" in find_problems(with_rule(conditions=None))[0].message
-    assert "always goes to a human" in find_problems(with_rule(rule_type="judgment"))[0].message
+    message = "every rule needs conditions (when it applies)"
+    assert find_problems(with_rule(conditions=None))[0].message == message
+    judgment = with_rule(rule_type="judgment", conditions=None)
+    assert find_problems(judgment)[0].message == message
+    assert find_problems(with_rule(rule_type="judgment")) == []  # judgment with conditions: fine
 
 
 def test_parameters_are_checked_too():

@@ -16,9 +16,22 @@ def test_a_healthy_applicant_passes_every_rule():
         "max_age": "passed",
         "smoker_review": "passed",
         "diabetes_review": "passed",
-        "heart_review": "needs_judgment",  # judgment rules always go to a human
+        "heart_review": "passed",  # a judgment rule only applies to the applicants it's about
     }
     assert r["max_age"].explanation == "age is 40 (not more than 65)"
+
+
+# A judgment rule: its conditions say who it's about, an underwriter decides for them
+def test_a_judgment_rule_goes_to_an_underwriter_only_when_its_conditions_are_true():
+    heart = {"age": 40, "bmi": 24, "smoker": False, "conditions": ["heart_disease"]}
+    r = results(heart)["heart_review"]
+    assert (r.status, r.outcome) == ("needs_judgment", "refer")
+    assert (
+        r.explanation == "Underwriter review: conditions is heart_disease (includes heart_disease)"
+    )
+
+    assert results({**heart, "conditions": []})["heart_review"].status == "passed"
+    assert results({**heart, "conditions": None})["heart_review"].status == "missing_data"
 
 
 def test_a_rule_not_passed_gives_its_outcome_and_explanation():

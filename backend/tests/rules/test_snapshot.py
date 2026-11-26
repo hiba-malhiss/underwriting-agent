@@ -20,8 +20,8 @@ def test_one_line_per_parameter_and_per_rule():
             # Nested groups get brackets
             '- diabetes_review: IF conditions contains "diabetes_type_2" AND '
             "(bmi greater_than 30 OR smoker equals true) THEN refer",
-            # Judgment rules have no conditions: their description says what they're about
-            "- heart_review: JUDGMENT Heart conditions at the underwriter's discretion THEN refer",
+            # A judgment rule: who it's about; an underwriter decides
+            '- heart_review: IF conditions contains "heart_disease" THEN refer (judgment)',
         ]
     )
 

@@ -3,9 +3,12 @@ result, and every result explains why.
 
 Each rule is a check the applicant passes or not. Its status is one of:
 - passed:         the rule's conditions are false, so nothing happens
-- not_passed:     the rule's conditions are true, so its outcome happens (e.g. decline)
+- not_passed:     an automatic rule's conditions are true, so its outcome happens (e.g. decline)
 - missing_data:   a value it needs wasn't found; never treated as passed
-- needs_judgment: a judgment rule; an underwriter decides
+- needs_judgment: a judgment rule's conditions are true, so an underwriter decides
+
+The conditions are checked first for EVERY rule, so a judgment rule only reaches an underwriter
+for the applicants it's about (e.g. those with heart disease), not for everyone.
 
 Missing values use three-valued logic (true / false / unknown):
 - match "all" (AND): any false → false; else any unknown → unknown; else true
@@ -55,15 +58,14 @@ def evaluate(rulebook: Rulebook, values: dict[str, Any]) -> list[RuleResult]:
 
 
 def _evaluate_rule(rule: Rule, values: dict[str, Any]) -> RuleResult:
-    if rule.rule_type == "judgment" or rule.conditions is None:
-        return RuleResult(
-            rule.name, "needs_judgment", rule.outcome, "Needs an underwriter's judgment"
-        )
-
     notes: list[str] = []
     missing: list[str] = []
     truth = _group(rule.conditions, values, notes, missing)
     explanation = "; ".join(notes)
+    if truth is True and rule.rule_type == "judgment":
+        return RuleResult(
+            rule.name, "needs_judgment", rule.outcome, f"Underwriter review: {explanation}"
+        )
     if truth is True:
         return RuleResult(rule.name, "not_passed", rule.outcome, explanation)
     if truth is False:

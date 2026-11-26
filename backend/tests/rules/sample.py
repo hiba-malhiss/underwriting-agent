@@ -92,6 +92,17 @@ def sample_rulebook() -> Rulebook:
                     "name": "heart_review",
                     "description": "Heart conditions at the underwriter's discretion",
                     "rule_type": "judgment",
+                    # Who it's about; an underwriter decides for them
+                    "conditions": {
+                        "match": "all",
+                        "items": [
+                            {
+                                "parameter": "conditions",
+                                "operator": "contains",
+                                "value": "heart_disease",
+                            }
+                        ],
+                    },
                     "outcome": "refer",
                     "source": source("Heart conditions are at the underwriter's discretion", 3),
                 },
